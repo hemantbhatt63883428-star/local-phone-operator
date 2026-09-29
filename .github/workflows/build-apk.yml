@@ -27,6 +27,8 @@ jobs:
           printf '\nkotlin {\n    compilerOptions {\n        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n    }\n}\n' >> LocalPhoneOperator/app/build.gradle.kts
           grep 'org.jetbrains.kotlin.android' LocalPhoneOperator/build.gradle.kts
           tail -n 8 LocalPhoneOperator/app/build.gradle.kts
+          sed -i '60,61c\        val node = (if (id >= 0) NodeTree.findById(root, id) else findFocusedOrEditable(root))\n            ?: return "EDITABLE_NODE_NOT_FOUND"' LocalPhoneOperator/app/src/main/java/com/hemant/localoperator/accessibility/DeviceController.kt
+          sed -i '/import android.graphics.Color/a import android.graphics.PixelFormat' LocalPhoneOperator/app/src/main/java/com/hemant/localoperator/ui/OperatorOverlay.kt
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
