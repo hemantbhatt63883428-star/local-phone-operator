@@ -23,7 +23,8 @@ jobs:
           unzip -q LocalPhoneOperator-source.zip
           test -f LocalPhoneOperator/app/build.gradle.kts
           sed -i 's/org.jetbrains.kotlin.android") version "2.0.21"/org.jetbrains.kotlin.android") version "2.4.0"/' LocalPhoneOperator/build.gradle.kts
-          python3 -c 'from pathlib import Path; p=Path("LocalPhoneOperator/app/build.gradle.kts"); s=p.read_text(); s=s.replace("    kotlinOptions {\\n        jvmTarget = \\"17\\"\\n    }\\n", ""); s += "\\nkotlin {\\n    compilerOptions {\\n        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\\n    }\\n}\\n"; p.write_text(s)'
+          perl -0pi -e 's/\n    kotlinOptions \{\n        jvmTarget = "17"\n    \}\n/\n/' LocalPhoneOperator/app/build.gradle.kts
+          printf '\nkotlin {\n    compilerOptions {\n        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)\n    }\n}\n' >> LocalPhoneOperator/app/build.gradle.kts
           grep 'org.jetbrains.kotlin.android' LocalPhoneOperator/build.gradle.kts
           tail -n 8 LocalPhoneOperator/app/build.gradle.kts
 
