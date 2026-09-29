@@ -1,1 +1,1 @@
-0012f5fdda34c33c779e8521721fbc5cbb3205d86672873a7111086383b37bcf  LocalPhoneOperator-source.zip
+8d7adc3dbf9eb4fa23cbb626cceb03aab74c4bc21f9edbae55aed35bcddfc2ad  LocalPhoneOperator-v1.1-source.zip
