@@ -1,46 +1,25 @@
 # Local Phone Operator
 
-Local-first Android AI operator prototype for Android 11+ using Android Accessibility and Google's LiteRT-LM.
+Android 11+ accessibility-based phone operator with a native chat UI, floating AI bubble, local LiteRT-LM planner, and optional OpenAI-compatible planner/vision endpoint. **Prototype for supervised personal use**, not an unattended or certified universal automation system.
 
-## Verified build
+## Install
 
-GitHub Actions build #6 completed successfully on 2026-09-30 (India time):
+Download the **LocalPhoneOperator-debug-apk** artifact from the latest successful [Build Local Phone Operator APK](https://github.com/hemantbhatt63883428-star/local-phone-operator/actions/workflows/build-apk.yml) run for this branch. Extract the ZIP and install `app-debug.apk` on an Android 11+ device (allow installation from your browser/files app if prompted). The debug APK is signed by Android's debug key; it is not a Play Store release. If upgrading a copy signed with a different key, uninstall the old app first (this erases its data).
 
-- Android debug APK: built successfully
-- Unit tests: passed
-- Artifact: `LocalPhoneOperator-debug-apk`
+Alternatively, open `LocalPhoneOperator/` in Android Studio (JDK 17, SDK 35) and build the debug variant. Source is checked in directly; the `source_parts/` archive is a legacy snapshot and is **not** used for builds.
 
-Build run:
-https://github.com/hemantbhatt63883428-star/local-phone-operator/actions/runs/36617352683
+## Set up
 
-## What it does
+1. Open the app and go to **Controls** → **Open Accessibility Settings**; enable Local Phone Operator.
+2. In **Models**, import a tool-calling planner `.litertlm` model, or select **OpenAI-compatible API**, fill in its base URL, model ID and API key, then save and test it. An imported model is not included in the APK.
+3. Optionally import a vision `.litertlm` model or configure a vision API. Vision is used only when requested by the planner.
+4. Enter a task in **Chat** and tap **Run**, or use the floating **AI** bubble. Chat history and progress are shared; only one task can run at a time. Expand the bubble to stop a task after it collapses for device automation.
 
-- Floating AI bubble
-- Natural-language task prompt
-- Accessibility UI-tree inspection
-- Generic tap / type / scroll / swipe / Back / Home / open-app tools
-- Optional screenshot + local vision-model fallback
-- Local LiteRT-LM planner model
-- Long multi-step task loop
-- Stop control
-- Password/PIN fields blocked
-- Sensitive side-effect controls gated by an owner toggle
+## Capabilities and boundaries
 
-## Phone setup
+- Inspect accessibility tree; open app; click text/node; enter text; scroll; tap/swipe; Back/Home; wait; optionally inspect screenshot; finish.
+- Password/PIN fields are blocked. Sensitive controls (such as Send, Delete and Pay) are gated by a user setting under Controls. Keep it off unless actively supervising.
+- No bypass of secure windows, CAPTCHA, authentication or protected flows. Automation quality depends on the target app's accessibility data and the selected model. On-device inference needs a compatible tool-calling LiteRT-LM model and sufficient RAM; cloud API use sends task/screen context to that provider.
+- `QUERY_ALL_PACKAGES` is used for sideloaded general app launching; Play Store publication requires policy review.
 
-1. Install the debug APK from the successful GitHub Actions artifact.
-2. Open **Local Phone Operator**.
-3. Tap **Open Accessibility Settings** and enable **Local Phone Operator**.
-4. Import a planner `.litertlm` model with tool/function-calling capability.
-5. Optionally import a multimodal vision `.litertlm` model.
-6. Tap the floating **AI** bubble, enter a task, and press **Run**.
-
-Example:
-
-> Open Telegram, find Amma group, search files containing xxx, download every match, continue until the end, and verify completion.
-
-## Important
-
-The app binary builds and its unit tests pass, but universal Android automation still requires real-device testing across the apps you want to control. Secure windows, authentication prompts, CAPTCHA, and protected system flows are intentionally not bypassed.
-
-The current repository stores the source archive as verified base64 chunks and reconstructs it during CI. The source archive SHA-256 is stored in `SOURCE_SHA256.txt`.
+See `LocalPhoneOperator/README.md` for architecture and model notes.

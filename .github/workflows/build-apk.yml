@@ -2,7 +2,7 @@ name: Build Local Phone Operator APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "arena/01a0f02d-local-phone-operator" ]
   workflow_dispatch:
 
 permissions:
@@ -12,16 +12,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
-
-      - name: Reconstruct source archive
-        shell: bash
-        run: |
-          cat source_parts/part1.b64 source_parts/part2.b64 source_parts/part3.b64 source_parts/part4.b64 source_parts/part5.b64 source_parts/part6.b64 | base64 -d > LocalPhoneOperator-v1.1-source.zip
-          sha256sum -c SOURCE_SHA256.txt
-          unzip -q LocalPhoneOperator-v1.1-source.zip
-          test -f LocalPhoneOperator/app/build.gradle.kts
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -34,17 +26,13 @@ jobs:
         with:
           gradle-version: '8.14.4'
 
-      - name: Build debug APK
+      - name: Build and test
         working-directory: LocalPhoneOperator
-        run: gradle :app:assembleDebug --stacktrace
+        run: gradle :app:assembleDebug :app:testDebugUnitTest --stacktrace
 
-      - name: Run unit tests
-        working-directory: LocalPhoneOperator
-        run: gradle :app:testDebugUnitTest --stacktrace
-
-      - name: Upload APK
+      - name: Upload installable debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: LocalPhoneOperator-v1.1-debug-apk
+          name: LocalPhoneOperator-debug-apk
           path: LocalPhoneOperator/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error

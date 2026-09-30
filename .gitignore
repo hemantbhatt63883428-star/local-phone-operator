@@ -1,0 +1,8 @@
+LocalPhoneOperator/.gradle/
+LocalPhoneOperator/.idea/
+LocalPhoneOperator/local.properties
+LocalPhoneOperator/build/
+LocalPhoneOperator/app/build/
+*.apk
+*.jks
+*.keystore

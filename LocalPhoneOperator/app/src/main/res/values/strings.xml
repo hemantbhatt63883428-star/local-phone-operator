@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Local Phone Operator</string>
+    <string name="accessibility_description">Runs user-requested phone tasks using on-device AI. Screen text is redacted for password fields.</string>
+</resources>
