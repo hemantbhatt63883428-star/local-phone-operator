@@ -30,7 +30,7 @@ class ChatPage(context: Context, private val scope: CoroutineScope, private val 
     private val muted = Color.rgb(104, 118, 145)
     private val blue = Color.rgb(49, 91, 224)
     private val transcript = LinearLayout(context).apply { orientation = VERTICAL }
-    private val scroll = ScrollView(context).apply { fillViewport = true; clipToPadding = false }
+    private val scroll = ScrollView(context).apply { isFillViewport = true; clipToPadding = false }
     private val status = TextView(context)
     private val send = TextView(context)
     private val stop = TextView(context)
@@ -67,7 +67,7 @@ class ChatPage(context: Context, private val scope: CoroutineScope, private val 
             setOnClickListener { openModels() }
         }
         addView(mode)
-        scroll.addView(transcript, ScrollView.LayoutParams(-1, -2))
+        scroll.addView(transcript, android.widget.FrameLayout.LayoutParams(-1, -2))
         addView(scroll, LayoutParams(-1, 0, 1f))
 
         val footer = LinearLayout(context).apply { orientation = VERTICAL; setPadding(12.dp, 8.dp, 12.dp, 10.dp) }

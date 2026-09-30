@@ -37,8 +37,6 @@ jobs:
             grep -E '^e:|^error:|^FAILURE:|^\* What went wrong:|^> Task .*FAILED|^\s+e:|^.*Unresolved reference|^.*Compilation error|^.*Could not resolve|^.*What went wrong' build.log | head -30 | while IFS= read -r line; do
               echo "::error::${line//%/%25}"
             done
-            echo "::error::Last build output:"
-            tail -25 build.log | while IFS= read -r line; do echo "::error::${line//%/%25}"; done
             exit "$result"
           fi
 
