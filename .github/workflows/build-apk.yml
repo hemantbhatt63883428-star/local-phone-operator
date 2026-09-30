@@ -34,9 +34,11 @@ jobs:
           gradle :app:assembleDebug :app:testDebugUnitTest --stacktrace 2>&1 | tee build.log
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then
-            grep -E '^e:|^error:|^FAILURE:|^\* What went wrong:|^> ' build.log | tail -30 | while IFS= read -r line; do
+            grep -E '^e:|^error:|^FAILURE:|^\* What went wrong:|^> Task .*FAILED|^\s+e:|^.*Unresolved reference|^.*Compilation error|^.*Could not resolve|^.*What went wrong' build.log | head -30 | while IFS= read -r line; do
               echo "::error::${line//%/%25}"
             done
+            echo "::error::Last build output:"
+            tail -25 build.log | while IFS= read -r line; do echo "::error::${line//%/%25}"; done
             exit "$result"
           fi
 
