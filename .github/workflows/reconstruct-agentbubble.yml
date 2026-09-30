@@ -1,0 +1,33 @@
+name: Reconstruct AgentBubble ZIP
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/reconstruct-agentbubble.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct exact ZIP
+        shell: bash
+        run: |
+          cat .upload/agentbubble/part*.b64 | base64 -d > AgentBubble-full-project.zip
+          echo "ff1d7b80f98cca1a3937b78c4c6e948bb10687eeafa28f2faea92f4b430ecadf  AgentBubble-full-project.zip" | sha256sum -c -
+          unzip -t AgentBubble-full-project.zip
+
+      - name: Commit ZIP
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add AgentBubble-full-project.zip
+          git commit -m "Add AgentBubble full project ZIP"
+          git push
