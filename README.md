@@ -4,7 +4,7 @@ Android 11+ accessibility-based phone operator with a native chat UI, floating A
 
 ## Install
 
-Download the **LocalPhoneOperator-debug-apk** artifact from the latest successful [Build Local Phone Operator APK](https://github.com/hemantbhatt63883428-star/local-phone-operator/actions/workflows/build-apk.yml) run for this branch. Extract the ZIP and install `app-debug.apk` on an Android 11+ device (allow installation from your browser/files app if prompted). The debug APK is signed by Android's debug key; it is not a Play Store release. If upgrading a copy signed with a different key, uninstall the old app first (this erases its data).
+Download [`install/LocalPhoneOperator-v1.2.0-debug.apk`](install/LocalPhoneOperator-v1.2.0-debug.apk) directly, or download the **LocalPhoneOperator-debug-apk** artifact from the latest successful [build](https://github.com/hemantbhatt63883428-star/local-phone-operator/actions/workflows/build-apk.yml) and extract its `app-debug.apk`. Install on an Android 11+ device (allow installation from your browser/files app if prompted). The debug APK is signed by Android's debug key; it is not a Play Store release. If upgrading a copy signed with a different key, uninstall the old app first (this erases its data).
 
 Alternatively, open `LocalPhoneOperator/` in Android Studio (JDK 17, SDK 35) and build the debug variant. Source is checked in directly; the `source_parts/` archive is a legacy snapshot and is **not** used for builds.
 

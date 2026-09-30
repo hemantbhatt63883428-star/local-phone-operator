@@ -5,10 +5,13 @@ import android.app.ActivityManager
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.provider.Settings
 import android.text.InputType
 import android.view.View
+import android.view.WindowInsets
 import android.widget.*
 import com.hemant.localoperator.model.ModelStore
 import com.hemant.localoperator.model.Prefs
@@ -23,13 +26,22 @@ class MainActivity : Activity() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var content: FrameLayout
     private lateinit var accessibilityBadge: TextView
+    private lateinit var navButtons: List<TextView>
     private var pendingSlot: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         title = "Local Phone Operator"
         window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        setContentView(buildShell())
+        val shell = buildShell()
+        setContentView(shell)
+        if (android.os.Build.VERSION.SDK_INT >= 35) {
+            shell.setOnApplyWindowInsetsListener { view, insets ->
+                val bars = insets.getInsets(WindowInsets.Type.systemBars())
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+                insets
+            }
+        }
         showChat()
     }
 
@@ -60,27 +72,57 @@ class MainActivity : Activity() {
     }
 
     private fun buildShell(): View {
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.rgb(248,249,252)) }
-        val header = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(18.dp, 14.dp, 18.dp, 8.dp) }
-        header.addView(TextView(this).apply { text = "Local Phone Operator"; textSize = 24f; setTextColor(Color.rgb(25,28,35)) })
-        accessibilityBadge = TextView(this).apply { textSize = 12f; setPadding(0, 5.dp, 0, 4.dp) }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.rgb(246, 248, 253))
+        }
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(18.dp, 15.dp, 18.dp, 10.dp)
+            setBackgroundColor(Color.WHITE)
+        }
+        header.addView(TextView(this).apply {
+            text = "✦  Local Phone Operator"
+            textSize = 22f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.rgb(24, 35, 59))
+        })
+        accessibilityBadge = TextView(this).apply { textSize = 12f; setPadding(2.dp, 6.dp, 0, 12.dp) }
         header.addView(accessibilityBadge)
         val nav = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        fun navButton(label: String, action: () -> Unit) = Button(this).apply { text = label; setOnClickListener { action() } }
-        nav.addView(navButton("Chat", ::showChat), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        nav.addView(navButton("Models", ::showModels), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        nav.addView(navButton("Controls", ::showControls), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        navButtons = listOf("Chat", "Models", "Controls").mapIndexed { index, label ->
+            TextView(this).apply {
+                text = label; gravity = android.view.Gravity.CENTER; textSize = 14f
+                typeface = Typeface.DEFAULT_BOLD
+                setPadding(3.dp, 11.dp, 3.dp, 11.dp)
+                setOnClickListener {
+                    when (index) { 0 -> showChat(); 1 -> showModels(); else -> showControls() }
+                }
+                nav.addView(this, LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(2.dp, 0, 2.dp, 0) })
+            }
+        }
         header.addView(nav)
         root.addView(header)
         content = FrameLayout(this)
-        root.addView(content, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
         refreshBadge()
         return root
     }
 
-    private fun showChat() { setPage(ChatPage(this, scope, ::showModels)) }
+    private fun selectTab(selected: Int) {
+        navButtons.forEachIndexed { i, tab ->
+            val active = i == selected
+            tab.setTextColor(if (active) Color.rgb(49, 91, 224) else Color.rgb(104, 118, 145))
+            tab.background = GradientDrawable().apply {
+                setColor(if (active) Color.rgb(234, 240, 255) else Color.TRANSPARENT)
+                cornerRadius = 12.dp.toFloat()
+            }
+        }
+    }
+
+    private fun showChat() { selectTab(0); setPage(ChatPage(this, scope, ::showModels)) }
 
     private fun showModels() {
+        selectTab(1)
         val root = LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(18.dp,8.dp,18.dp,22.dp) }
         root.addView(section("Planner model"))
         val plannerSpinner = spinner(listOf("Local LiteRT-LM", "OpenAI-compatible API"), if (Prefs.plannerProvider(this)==Prefs.PROVIDER_OPENAI) 1 else 0)
@@ -135,6 +177,7 @@ class MainActivity : Activity() {
     }
 
     private fun showControls() {
+        selectTab(2)
         val root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(18.dp,8.dp,18.dp,22.dp) }
         root.addView(section("Accessibility")); root.addView(info(if(isAccessibilityEnabled()) "Enabled ✓" else "Disabled"))
         root.addView(Button(this).apply { text="Open Accessibility Settings"; setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) } })

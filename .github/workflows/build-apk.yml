@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -46,3 +46,18 @@ jobs:
           name: LocalPhoneOperator-debug-apk
           path: LocalPhoneOperator/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      # The user needs a directly installable file, not only a ZIP artifact.
+      # The APK is the sole generated binary committed to this branch.
+      - name: Publish installable APK to this branch
+        if: github.ref_name == 'arena/01a0f02d-local-phone-operator'
+        run: |
+          mkdir -p install
+          cp LocalPhoneOperator/app/build/outputs/apk/debug/app-debug.apk install/LocalPhoneOperator-v1.2.0-debug.apk
+          (cd install && sha256sum LocalPhoneOperator-v1.2.0-debug.apk > SHA256SUMS)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f install/LocalPhoneOperator-v1.2.0-debug.apk
+          git add install/SHA256SUMS
+          git commit -m 'Publish v1.2.0 installable debug APK [skip ci]'
+          git push origin HEAD:refs/heads/arena/01a0f02d-local-phone-operator
