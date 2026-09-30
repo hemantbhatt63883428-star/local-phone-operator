@@ -28,7 +28,17 @@ jobs:
 
       - name: Build and test
         working-directory: LocalPhoneOperator
-        run: gradle :app:assembleDebug :app:testDebugUnitTest --stacktrace
+        shell: bash
+        run: |
+          set +e
+          gradle :app:assembleDebug :app:testDebugUnitTest --stacktrace 2>&1 | tee build.log
+          result=${PIPESTATUS[0]}
+          if [ "$result" -ne 0 ]; then
+            grep -E '^e:|^error:|^FAILURE:|^\* What went wrong:|^> ' build.log | tail -30 | while IFS= read -r line; do
+              echo "::error::${line//%/%25}"
+            done
+            exit "$result"
+          fi
 
       - name: Upload installable debug APK
         uses: actions/upload-artifact@v4
