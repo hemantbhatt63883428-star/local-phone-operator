@@ -63,6 +63,23 @@ class ActionPanel(private val ctx: Context, private val stop: () -> Unit, privat
         finally { waiting = null; allow.visibility = View.GONE }
     }
     fun cancelApproval() { waiting?.complete(false); waiting = null; allow.visibility = View.GONE }
+
+    /**
+     * Accessibility fallback gestures are real screen gestures. Make this overlay fully transparent
+     * and non-touchable for that short dispatch so the app underneath receives the gesture.
+     */
+    fun setHiddenForAction(hidden: Boolean) {
+        if (!attached) return
+        root.visibility = if (hidden) View.INVISIBLE else View.VISIBLE
+        lp.alpha = if (hidden) 0f else 1f
+        lp.flags = if (hidden) {
+            lp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        } else {
+            lp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+        }
+        runCatching { wm.updateViewLayout(root, lp) }
+    }
+
     fun finish(text: String) { cancelApproval(); done = true; label.text = text; close.text = "Back to chat" }
     fun remove() { cancelApproval(); if (attached) { runCatching { wm.removeView(root) }; attached = false } }
 }

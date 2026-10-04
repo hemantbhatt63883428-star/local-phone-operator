@@ -501,6 +501,22 @@ class BubbleService : Service() {
         }
     }
 
+    private fun setActionWindowsHidden(hidden: Boolean) {
+        bubbleView?.let { view ->
+            view.visibility = if (hidden) View.INVISIBLE else View.VISIBLE
+            bubbleParams?.let { params ->
+                params.alpha = if (hidden) 0f else 1f
+                params.flags = if (hidden) {
+                    params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                } else {
+                    params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+                }
+                runCatching { wm.updateViewLayout(view, params) }
+            }
+        }
+        actionPanel?.setHiddenForAction(hidden)
+    }
+
     private fun startAction(task: String, session: com.agentbubble.data.Session) {
         if (actionJob?.isActive == true) return
         val cfg = store.activeProvider()?.copy() ?: return
@@ -520,13 +536,20 @@ class BubbleService : Service() {
                 val priorTurns = session.messages.dropLast(1).takeLast(12).map {
                     com.agentbubble.data.ChatMessage(it.role, it.content)
                 }
-                result = com.agentbubble.operator.ActionRunner(this@BubbleService)
-                    .run(task, cfg, { control.status(it) }, { control.approve(it) }, priorTurns)
+                result = com.agentbubble.operator.ActionRunner(
+                    this@BubbleService,
+                    beforeExecute = {
+                        setActionWindowsHidden(true)
+                        kotlinx.coroutines.delay(120)
+                    },
+                    afterExecute = { setActionWindowsHidden(false) }
+                ).run(task, cfg, { control.status(it) }, { control.approve(it) }, priorTurns)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 result = "Stopped or timed out. No further actions will run. An already-dispatched gesture may finish."
             } catch (e: Exception) {
                 result = "Task stopped: " + (e.message ?: e.javaClass.simpleName).take(400)
             } finally {
+                setActionWindowsHidden(false)
                 com.agentbubble.data.SessionStore.append(this@BubbleService, session, "assistant", result)
                 control.remove()
                 actionPanel = null

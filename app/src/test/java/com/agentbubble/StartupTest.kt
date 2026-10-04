@@ -511,7 +511,7 @@ class StartupTest {
         assertEquals(2, list.childCount)
 
         val row = list.getChildAt(1) as android.view.ViewGroup
-        row.getChildAt(1).performClick()   // the ✕ of that row
+        row.getChildAt(2).performClick()   // the ✕ of that row (after the download button)
 
         assertEquals("gone from the phone", 1, com.agentbubble.data.SessionStore.forModel(ctx, "p1", "model-one").size)
         assertEquals("gone from the list", 1, list.childCount)

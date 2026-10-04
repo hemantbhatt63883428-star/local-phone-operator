@@ -460,6 +460,16 @@ class ChatPanel(
         row.addView(col)
 
         row.addView(ImageButton(ctx).apply {
+            setImageResource(android.R.drawable.ic_menu_save)
+            setColorFilter(color(com.agentbubble.R.color.accent))
+            background = selectableBackground()
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            contentDescription = "Download this complete chat"
+            layoutParams = LinearLayout.LayoutParams(dp(34), dp(34))
+            setOnClickListener { exportSession(s) }
+        })
+
+        row.addView(ImageButton(ctx).apply {
             setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
             setColorFilter(color(com.agentbubble.R.color.text_dim))
             background = selectableBackground()
@@ -492,6 +502,15 @@ class ChatPanel(
         engine = null
         hideHistory()
         renderSession()
+    }
+
+    private fun exportSession(chat: Session) {
+        try {
+            val fileName = SessionStore.exportToDownloads(ctx, chat)
+            toast("Saved: Downloads/LocalPhoneOperator/$fileName")
+        } catch (t: Throwable) {
+            toast("Could not download chat: " + (t.message ?: "storage error"))
+        }
     }
 
     private fun deleteSession(id: String) {

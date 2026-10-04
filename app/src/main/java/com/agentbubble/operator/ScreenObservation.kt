@@ -27,9 +27,13 @@ data class ScreenObservation(
                 .put("url", "data:image/jpeg;base64,$jpegBase64")
                 .put("detail", "low")))
 
-    /** Observation IDs are tied to the image and UI tree, not wall-clock time. */
-    fun stableKey(): Int = listOf<Any>(packageName, rotation, windowBounds.toShortString(), tree,
-        jpegBase64).hashCode()
+    /**
+     * Reject an action when the target window or accessibility layout changed. Compressed image
+     * bytes are deliberately excluded: a blinking cursor or tiny animation changes JPEG bytes even
+     * though every actionable target is still in the same place.
+     */
+    fun stableKey(): Int =
+        listOf<Any>(packageName, rotation, windowBounds.toShortString(), tree).hashCode()
 
     fun imageToDisplay(x: Int, y: Int): Pair<Int, Int> {
         require(x in 0 until imageWidth && y in 0 until imageHeight) { "Point is outside the observed image" }

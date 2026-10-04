@@ -4,6 +4,9 @@ import android.content.Context
 import android.graphics.Rect
 import androidx.test.core.app.ApplicationProvider
 import com.agentbubble.data.ProviderConfig
+import com.agentbubble.data.Session
+import com.agentbubble.data.SessionStore
+import com.agentbubble.data.Turn
 import com.agentbubble.data.SecretVault
 import com.agentbubble.data.SettingsStore
 import com.agentbubble.net.LlmToolCall
@@ -40,17 +43,22 @@ class OperatorTest {
         SecretVault.keyProvider = { key }
     }
 
-    private fun observation(tree: String = "#0 t=Open b=0,0,80,80", rotation: Int = 0) =
-        ScreenObservation("com.example", 1L, rotation, Rect(10, 20, 110, 220), 50, 100, "Zg==", tree)
+    private fun observation(
+        tree: String = "#0 t=Open b=0,0,80,80",
+        rotation: Int = 0,
+        jpeg: String = "Zg=="
+    ) = ScreenObservation("com.example", 1L, rotation, Rect(10, 20, 110, 220), 50, 100, jpeg, tree)
 
     private class FakeDevice(var screen: ScreenObservation) : ActionDevice {
         var actions = 0
         var observations = 0
         var onObserve: (() -> Unit)? = null
         var result = "CLICKED"
+        var onExecute: (() -> Unit)? = null
         override suspend fun observe(): ScreenObservation { observations++; onObserve?.invoke(); return screen }
         override suspend fun execute(proposal: Proposal, observed: ScreenObservation): String {
             actions++
+            onExecute?.invoke()
             return result
         }
     }
@@ -144,6 +152,41 @@ class OperatorTest {
         assertEquals(60 to 120, shot.imageToDisplay(25, 50))
         assertThrows(IllegalArgumentException::class.java) { shot.imageToDisplay(50, 0) }
         assertNotEquals(shot.stableKey(), observation(rotation = 1).stableKey())
+        assertEquals("cursor or animation pixels must not reject an unchanged UI",
+            shot.stableKey(), observation(jpeg = "different-frame").stableKey())
+    }
+
+    @Test fun operatorWindowsAreRestoredAfterExecution() = runBlocking {
+        val device = FakeDevice(observation())
+        var calls = 0
+        var hidden = false
+        var actionSawHiddenWindows = false
+        val runner = ActionRunner(
+            ctx,
+            device,
+            { _, _ ->
+                if (calls++ == 0) call("click_text", """{"text":"Open"}""")
+                else LlmToolResponse("Done", emptyList())
+            },
+            0,
+            beforeExecute = { hidden = true },
+            afterExecute = { hidden = false }
+        )
+        device.onExecute = { actionSawHiddenWindows = hidden }
+        runner.run("Open it", cfg, {}, { true })
+        assertTrue(actionSawHiddenWindows)
+        assertFalse("operator windows must be visible again", hidden)
+    }
+
+    @Test fun completeChatExportsAsReadableText() {
+        val session = Session(
+            "id", "provider", "model", "My chat", 1L,
+            mutableListOf(Turn("user", "Open Telegram"), Turn("assistant", "Opened it"))
+        )
+        val text = SessionStore.exportText(session)
+        assertTrue(text.contains("Title: My chat"))
+        assertTrue(text.contains("[USER]\nOpen Telegram"))
+        assertTrue(text.contains("[AI]\nOpened it"))
     }
 
     @Test fun onlyFinalActionsNeedConfirmation() {

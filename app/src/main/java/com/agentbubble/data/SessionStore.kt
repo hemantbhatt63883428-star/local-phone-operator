@@ -1,6 +1,9 @@
 package com.agentbubble.data
 
+import android.content.ContentValues
 import android.content.Context
+import android.os.Environment
+import android.provider.MediaStore
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -138,6 +141,59 @@ object SessionStore {
 
     fun delete(ctx: Context, id: String) {
         saveAll(ctx, all(ctx).filter { it.id != id })
+    }
+
+    fun exportText(session: Session): String = buildString {
+        appendLine("Local Phone Operator chat")
+        appendLine("Title: ${session.title}")
+        appendLine("Provider: ${session.providerId}")
+        appendLine("Model: ${session.model}")
+        appendLine("Last updated: ${stamp(session.updatedAt)}")
+        appendLine()
+        session.messages.forEachIndexed { index, turn ->
+            val speaker = when (turn.role.lowercase()) {
+                "user" -> "USER"
+                "assistant" -> "AI"
+                else -> turn.role.uppercase()
+            }
+            appendLine("[$speaker]")
+            appendLine(turn.content)
+            if (index != session.messages.lastIndex) appendLine()
+        }
+    }
+
+    /**
+     * Writes one complete conversation as a readable text file. Android 13+ MediaStore needs no
+     * broad storage permission and leaves the file in Downloads for attachment to another chat.
+     */
+    fun exportToDownloads(ctx: Context, session: Session): String {
+        val safeTitle = session.title.trim()
+            .replace(Regex("[^\\p{L}\\p{N}._-]+"), "_")
+            .trim('_')
+            .take(48)
+            .ifBlank { "chat" }
+        val whenSaved = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
+        val fileName = "LocalPhoneOperator-$safeTitle-$whenSaved.txt"
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/LocalPhoneOperator")
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+        val uri = ctx.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: error("Android could not create the download file")
+        try {
+            ctx.contentResolver.openOutputStream(uri, "w")?.use {
+                it.write(exportText(session).toByteArray(Charsets.UTF_8))
+            } ?: error("Android could not open the download file")
+            ctx.contentResolver.update(uri, ContentValues().apply {
+                put(MediaStore.MediaColumns.IS_PENDING, 0)
+            }, null, null)
+            return fileName
+        } catch (t: Throwable) {
+            runCatching { ctx.contentResolver.delete(uri, null, null) }
+            throw t
+        }
     }
 
     fun clearAll(ctx: Context) {
