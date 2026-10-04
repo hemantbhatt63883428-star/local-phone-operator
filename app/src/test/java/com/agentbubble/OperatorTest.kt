@@ -12,6 +12,7 @@ import com.agentbubble.operator.ActionDevice
 import com.agentbubble.operator.ActionRunner
 import com.agentbubble.operator.Proposal
 import com.agentbubble.operator.ScreenObservation
+import com.agentbubble.operator.ScreenCapturePolicy
 import com.agentbubble.operator.SafetyPolicy
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
@@ -162,6 +163,17 @@ class OperatorTest {
         val disk = ctx.getSharedPreferences("agentbubble", Context.MODE_PRIVATE).getString("providers", "")!!
         assertFalse(disk.contains("\"key\""))
         assertEquals("key", store.activeProvider()?.apiKey)
+    }
+
+    @Test fun screenshotRateLimitRetriesAndReportsTheRealFailure() {
+        assertTrue(ScreenCapturePolicy.shouldRetry(3, 0))
+        assertTrue(ScreenCapturePolicy.shouldRetry(3, 1))
+        assertFalse(ScreenCapturePolicy.shouldRetry(3, 2))
+        assertFalse(ScreenCapturePolicy.shouldRetry(6, 0))
+        assertEquals(750L, ScreenCapturePolicy.retryDelayMs(0))
+        assertEquals(1500L, ScreenCapturePolicy.retryDelayMs(1))
+        assertTrue(ScreenCapturePolicy.failureMessage(3).contains("rate limit", ignoreCase = true))
+        assertTrue(ScreenCapturePolicy.failureMessage(6).contains("secure", ignoreCase = true))
     }
 
     @Test fun taskModeRequiresAllCapabilitiesForTheCurrentCredentials() {
