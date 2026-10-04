@@ -162,7 +162,9 @@ class StartupTest {
             assertTrue("history must hold the exchange", engine.historySize >= 3)
 
             // and nothing about tools or screen reading is ever sent
-            val body = server.takeRequest().body.readUtf8()
+            val body = requireNotNull(server.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                "Chat request never reached the provider"
+            }.body.readUtf8()
             assertTrue(body.contains("\"model\":\"my-model\""))
             assertFalse("tools must not be sent at all", body.contains("tools"))
             assertFalse(body.contains("image_url"))
@@ -818,7 +820,9 @@ class StartupTest {
                 listOf("user" to "2+2?", "assistant" to "4", "user" to "are you sure?")
             )
             engine.send("really?")
-            val body = server.takeRequest().body.readUtf8()
+            val body = requireNotNull(server.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                "History request never reached the provider"
+            }.body.readUtf8()
             assertTrue("earlier turns must be sent again", body.contains("2+2?"))
             assertTrue(body.contains("are you sure?"))
             assertTrue(body.contains("really?"))
