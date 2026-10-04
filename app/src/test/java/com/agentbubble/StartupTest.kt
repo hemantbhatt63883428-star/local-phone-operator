@@ -517,7 +517,7 @@ class StartupTest {
         assertEquals("gone from the list", 1, list.childCount)
 
         // deleting the chat that is open must not leave an empty card behind
-        (list.getChildAt(0) as android.view.ViewGroup).getChildAt(1).performClick()
+        (list.getChildAt(0) as android.view.ViewGroup).getChildAt(2).performClick()
         assertEquals("both are gone", 0, com.agentbubble.data.SessionStore.forModel(ctx, "p1", "model-one").size)
         assertEquals("the list says so", 1, list.childCount)
         assertEquals("back to the conversation", View.GONE, root.findViewById<View>(R.id.historyBox).visibility)
