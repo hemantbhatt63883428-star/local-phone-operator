@@ -146,6 +146,9 @@ class OperatorTest {
         val shot = observation("#0 t=Send b=0,0,80,80")
         assertFalse(SafetyPolicy.requiresConfirmation(Proposal("click_text", JSONObject("""{"text":"Open"}"""), ""), shot))
         assertTrue(SafetyPolicy.requiresConfirmation(Proposal("click_text", JSONObject("""{"text":"Send"}"""), ""), shot))
+        assertTrue(SafetyPolicy.requiresConfirmation(Proposal("click_text", JSONObject("""{"text":"Payment"}"""), ""), shot))
+        assertTrue(SafetyPolicy.requiresConfirmation(Proposal("click_text", JSONObject("""{"text":"Confirm"}"""), ""),
+            observation("#0 t=Payment b=0,0,80,80\n#1 t=Confirm b=0,80,80,160")))
         assertTrue(SafetyPolicy.requiresConfirmation(Proposal("tap", JSONObject("""{"x":1,"y":1}"""), ""), shot))
     }
 
