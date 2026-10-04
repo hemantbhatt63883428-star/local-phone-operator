@@ -225,7 +225,7 @@ class LlmClient(private val cfg: ProviderConfig) {
         val content = JSONArray()
             .put(JSONObject().put("type", "text").put("text", "Read the three-character code in this image. Reply only with the code."))
             .put(JSONObject().put("type", "image_url").put("image_url",
-                JSONObject().put("url", "data:image/png;base64,$image")))
+                JSONObject().put("url", "data:image/png;base64,$image").put("detail", "low")))
         val body = JSONObject().put("model", cfg.model).put("messages",
             JSONArray().put(JSONObject().put("role", "user").put("content", content)))
             .put("max_tokens", 40)

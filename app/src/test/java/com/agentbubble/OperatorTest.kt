@@ -63,6 +63,7 @@ class OperatorTest {
         val runner = ActionRunner(ctx, d, { messages: JSONArray, _: JSONArray ->
             val content = messages.getJSONObject(messages.length() - 1).getJSONArray("content")
             imageSent = content.getJSONObject(1).getString("type") == "image_url"
+            assertEquals("low", content.getJSONObject(1).getJSONObject("image_url").getString("detail"))
             LlmToolResponse("The Open button is visible.", emptyList())
         }, 0)
         val answer = runner.run("What is on screen?", cfg, {}, { fail("No action needs approval"); false })
@@ -125,7 +126,9 @@ class OperatorTest {
             else {
                 sawResult = messages.toString().contains("tool_call_id") &&
                     messages.getJSONObject(messages.length() - 1).getJSONArray("content")
-                        .getJSONObject(1).getString("type") == "image_url"
+                        .getJSONObject(1).getString("type") == "image_url" &&
+                    messages.getJSONObject(messages.length() - 1).getJSONArray("content")
+                        .getJSONObject(1).getJSONObject("image_url").getString("detail") == "low"
                 LlmToolResponse("Now the app is open.", emptyList())
             }
         }, 0)

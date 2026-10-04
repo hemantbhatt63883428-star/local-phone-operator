@@ -5,6 +5,8 @@ Android floating assistant based on the editable AgentBubble source. The app has
 - **Chat:** API conversation with saved history. Accessibility and device tools are never used.
 - **Chat + Tasks:** each request sends a fresh image of the target app window and its accessibility UI tree to the selected API model. The model may answer, ask a question, or call one device tool. Each action is followed by a fresh observation.
 
+Screen images use the provider's low-detail vision mode, a maximum 1024-pixel long edge, and JPEG quality 68. Exact UI text and element bounds come from the accessibility tree, keeping the image useful for visual layout while reducing vision tokens and upload size. Only the latest image is retained in an API turn; older observations become bounded text context.
+
 Configure an HTTPS OpenAI-compatible provider with a model that supports both image input and function calling. Settings has independent **Check chat**, **Check image input**, and **Check tool calling** probes. API keys are encrypted with Android Keystore before storage.
 
 Chat + Tasks requires Android 14+ and the Accessibility service. Secure screens may refuse capture. Password and authentication screens are blocked. Normal navigation proceeds within the requested task; coordinate taps and final send, delete, purchase, and payment controls request confirmation. Stop cancels the API request and prevents subsequent actions.

@@ -18,7 +18,11 @@ import kotlin.coroutines.resumeWithException
 
 /** Passive unless a user explicitly starts an Action task. No overlay or polling on connect. */
 class OperatorAccessibilityService : AccessibilityService() {
-    companion object { @Volatile var connected: OperatorAccessibilityService? = null; private set }
+    companion object {
+        private const val MAX_SCREEN_IMAGE_EDGE = 1024f
+        private const val SCREEN_JPEG_QUALITY = 68
+        @Volatile var connected: OperatorAccessibilityService? = null; private set
+    }
     override fun onServiceConnected() { connected = this }
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
     override fun onInterrupt() { if (connected === this) connected = null }
@@ -60,12 +64,14 @@ class OperatorAccessibilityService : AccessibilityService() {
                     ?: error("Could not read captured window image")
             } finally { buffer.close() }
             try {
-                val ratio = minOf(1f, 1280f / maxOf(raw.width, raw.height))
+                // The accessibility tree carries exact text and bounds. The image only needs to
+                // preserve visual layout, icons and controls, so keep it deliberately economical.
+                val ratio = minOf(1f, MAX_SCREEN_IMAGE_EDGE / maxOf(raw.width, raw.height))
                 val width = (raw.width * ratio).toInt().coerceAtLeast(1)
                 val height = (raw.height * ratio).toInt().coerceAtLeast(1)
                 val scaled = if (ratio < 1f) Bitmap.createScaledBitmap(raw, width, height, true) else raw
                 val bytes = ByteArrayOutputStream().use { stream ->
-                    check(scaled.compress(Bitmap.CompressFormat.JPEG, 78, stream)) { "Could not encode screen image" }
+                    check(scaled.compress(Bitmap.CompressFormat.JPEG, SCREEN_JPEG_QUALITY, stream)) { "Could not encode screen image" }
                     stream.toByteArray()
                 }
                 if (scaled !== raw) scaled.recycle()

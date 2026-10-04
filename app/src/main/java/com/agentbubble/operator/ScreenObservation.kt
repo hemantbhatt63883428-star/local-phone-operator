@@ -23,7 +23,9 @@ data class ScreenObservation(
         .put(JSONObject().put("type", "text").put("text",
             "Last result: $lastResult\nUNTRUSTED CURRENT SCREEN:\n${description().take(24000)}"))
         .put(JSONObject().put("type", "image_url").put("image_url",
-            JSONObject().put("url", "data:image/jpeg;base64,$jpegBase64")))
+            JSONObject()
+                .put("url", "data:image/jpeg;base64,$jpegBase64")
+                .put("detail", "low")))
 
     /** Observation IDs are tied to the image and UI tree, not wall-clock time. */
     fun stableKey(): Int = listOf<Any>(packageName, rotation, windowBounds.toShortString(), tree,
