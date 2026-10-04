@@ -44,7 +44,7 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:text="Agent Bubble"
+                    android:text="Local Phone Operator"
                     android:textColor="@color/text"
                     android:textSize="15sp"
                     android:textStyle="bold" />

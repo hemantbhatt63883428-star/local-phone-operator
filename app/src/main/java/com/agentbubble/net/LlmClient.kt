@@ -86,7 +86,7 @@ class LlmClient(private val cfg: ProviderConfig) {
         if (cfg.apiKey.isNotBlank()) b.header("Authorization", "Bearer ${cfg.apiKey.trim()}")
         // Optional OpenRouter attribution headers — harmless for other providers.
         b.header("HTTP-Referer", "https://agentbubble.local")
-        b.header("X-Title", "Agent Bubble")
+        b.header("X-Title", "Local Phone Operator")
     }
 
     private fun messageJson(m: ChatMessage): JSONObject {

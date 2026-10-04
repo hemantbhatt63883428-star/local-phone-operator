@@ -1,6 +1,6 @@
 <resources>
-    <string name="app_name">Agent Bubble</string>
-    <string name="accessibility_label">Agent Bubble — screen control</string>
-    <string name="accessibility_desc">Lets the Agent Bubble AI read what is on your screen and tap, type, scroll and navigate apps for you. Required for screen vision and hands-free task execution. No data is collected by the app itself.</string>
-<string name="operator_disclosure">Only during an Action task, Agent Bubble reads the current screen and performs steps you approve. API mode sends screen text to your selected provider. Chat never reads or controls your phone. Stop ends the run. Authentication screens are blocked.</string>
+    <string name="app_name">Local Phone Operator</string>
+    <string name="accessibility_label">Local Phone Operator — screen control</string>
+    <string name="accessibility_desc">Lets the Local Phone Operator AI read what is on your screen and tap, type, scroll and navigate apps for you. Required for screen vision and hands-free task execution. In Chat + Tasks, a fresh screenshot and UI text are sent to your selected API provider.</string>
+<string name="operator_disclosure">Only during Chat + Tasks requests, Local Phone Operator captures the current app window and reads UI elements. The image and UI text are sent to your selected API provider. Final send, delete and payment actions need confirmation. Chat never reads or controls your phone. Stop ends the run. Authentication screens are blocked.</string>
 </resources>

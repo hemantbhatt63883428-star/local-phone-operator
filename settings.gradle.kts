@@ -11,5 +11,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "AgentBubble"
+rootProject.name = "LocalPhoneOperator"
 include(":app")

@@ -2,6 +2,7 @@ package com.agentbubble.data
 
 import android.content.Context
 import java.io.File
+import java.security.MessageDigest
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -113,6 +114,21 @@ class SettingsStore(context: Context) {
         val list = providers()
         return list.firstOrNull { it.id == activeProviderId() } ?: list.firstOrNull()
     }
+
+    private fun capabilityKey(cfg: ProviderConfig, kind: String): String {
+        val identity = "${cfg.baseUrl}\n${cfg.model}\n${cfg.apiKey}"
+        val digest = MessageDigest.getInstance("SHA-256").digest(identity.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        return "capability_${digest}_$kind"
+    }
+
+    fun setCapability(cfg: ProviderConfig, kind: String, works: Boolean) {
+        require(kind in setOf("chat", "image", "tools"))
+        sp.edit().putBoolean(capabilityKey(cfg, kind), works).apply()
+    }
+
+    fun hasTaskCapabilities(cfg: ProviderConfig): Boolean =
+        listOf("chat", "image", "tools").all { sp.getBoolean(capabilityKey(cfg, it), false) }
 
     /** The model the user last picked, remembered per provider. */
     fun pickedModel(providerId: String): String =

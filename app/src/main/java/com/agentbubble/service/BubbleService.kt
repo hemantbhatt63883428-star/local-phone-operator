@@ -180,7 +180,7 @@ class BubbleService : Service() {
             showBubble()
         } catch (t: Throwable) {
             com.agentbubble.AgentApp.saveCrash(this, t)
-            toast("Agent Bubble could not start: ${t.message ?: t.javaClass.simpleName}")
+            toast("Local Phone Operator could not start: ${t.message ?: t.javaClass.simpleName}")
             stopSelf()
         }
     }
@@ -257,7 +257,7 @@ class BubbleService : Service() {
             if (nm.getNotificationChannel(channelId) == null) {
                 val ch = NotificationChannel(
                     channelId,
-                    "Agent Bubble",
+                    "Local Phone Operator",
                     NotificationManager.IMPORTANCE_LOW
                 )
                 ch.description = "Keeps the floating assistant bubble running"
@@ -277,7 +277,7 @@ class BubbleService : Service() {
         )
         return NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_bubble)
-            .setContentTitle(if (working) "Agent is working…" else "Agent Bubble is running")
+            .setContentTitle(if (working) "Agent is working…" else "Local Phone Operator is running")
             .setContentText(
                 when {
                     working -> "Answering… tap the bubble to read it"
@@ -355,7 +355,7 @@ class BubbleService : Service() {
             } catch (_: Throwable) {
             }
             bubbleView = null
-            toast("Could not show the bubble — please allow \"Display over other apps\" for Agent Bubble.")
+            toast("Could not show the bubble — please allow \"Display over other apps\" for Local Phone Operator.")
             stopSelf()
         }
     }
@@ -448,7 +448,7 @@ class BubbleService : Service() {
                 v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             } catch (_: Throwable) {
             }
-            toast("Agent Bubble closed")
+            toast("Local Phone Operator closed")
             closeChat()
             stopSelf()
         }

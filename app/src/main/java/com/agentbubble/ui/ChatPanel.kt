@@ -221,7 +221,7 @@ class ChatPanel(
         val model = cfg?.model.orEmpty()
         when {
             cfg == null -> {
-                binding.title.text = "Agent Bubble"
+                binding.title.text = "Local Phone Operator"
                 binding.subtitle.text = "Tap to add your AI"
             }
             model.isBlank() -> {
@@ -608,6 +608,10 @@ class ChatPanel(
         }
 
         if (actionMode) {
+            if (!store.hasTaskCapabilities(cfg)) {
+                addAi("Run all three API checks in Settings → AI & phone actions before using Chat + Tasks.")
+                return
+            }
             if (com.agentbubble.operator.OperatorAccessibilityService.connected == null) {
                 addAi("Enable accessibility in Settings → Action setup first. Chat does not need accessibility.")
                 return

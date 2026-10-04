@@ -146,4 +146,16 @@ class OperatorTest {
         assertFalse(disk.contains("\"key\""))
         assertEquals("key", store.activeProvider()?.apiKey)
     }
+
+    @Test fun taskModeRequiresAllCapabilitiesForTheCurrentCredentials() {
+        val store = SettingsStore(ctx)
+        assertFalse(store.hasTaskCapabilities(cfg))
+        store.setCapability(cfg, "chat", true)
+        store.setCapability(cfg, "image", true)
+        assertFalse(store.hasTaskCapabilities(cfg))
+        store.setCapability(cfg, "tools", true)
+        assertTrue(store.hasTaskCapabilities(cfg))
+        assertFalse(store.hasTaskCapabilities(cfg.copy(model = "other")))
+        assertFalse(store.hasTaskCapabilities(cfg.copy(apiKey = "rotated")))
+    }
 }

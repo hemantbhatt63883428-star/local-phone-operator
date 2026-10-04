@@ -82,6 +82,9 @@ class OperatorAccessibilityService : AccessibilityService() {
      * declaring failure instead of asking the user to reopen an already-visible app.
      */
     fun targetRoot(): AccessibilityNodeInfo? {
+        // Use the same application window that observeScreen captures. The focused IME window
+        // must not replace the observed app as a tool target when the keyboard is visible.
+        targetWindow()?.root?.let { return it }
         val own = packageName
         val active = runCatching { rootInActiveWindow }
             .getOrNull()

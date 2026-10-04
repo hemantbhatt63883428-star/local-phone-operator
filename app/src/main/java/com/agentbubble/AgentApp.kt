@@ -36,7 +36,7 @@ class AgentApp : Application() {
             try {
                 val sw = StringWriter()
                 val pw = PrintWriter(sw)
-                pw.println("Agent Bubble crash report")
+                pw.println("Local Phone Operator crash report")
                 pw.println(
                     "When: " + SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
                 )

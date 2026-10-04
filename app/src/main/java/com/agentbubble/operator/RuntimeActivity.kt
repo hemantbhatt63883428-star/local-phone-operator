@@ -46,9 +46,9 @@ class RuntimeActivity : AppCompatActivity() {
             }
         }
         text("Check your selected model separately. Chat needs text responses. Chat + Tasks needs both image input and function calling.")
-        button("Check chat") { check("Chat") { it.checkChat() } }
-        button("Check image input") { check("Image input") { it.checkImage() } }
-        button("Check tool calling") { check("Tool calling") { it.checkToolCalling() } }
+        button("Check chat") { check("Chat", "chat") { it.checkChat() } }
+        button("Check image input") { check("Image input", "image") { it.checkImage() } }
+        button("Check tool calling") { check("Tool calling", "tools") { it.checkToolCalling() } }
         text("Chat reads your conversation only. Chat + Tasks sends a fresh screenshot of the current app window and accessible UI text to your selected API provider when you ask it a question or task. Android 14 or newer is needed for screen images. Secure windows may refuse capture. Navigation runs within your request; final send, delete and payment actions require confirmation. Stop cancels the pending API request and blocks further actions.")
         button("Open Accessibility settings") {
             AlertDialog.Builder(this)
@@ -64,7 +64,7 @@ class RuntimeActivity : AppCompatActivity() {
         button("Back to settings") { finish() }
     }
 
-    private fun check(label: String, action: suspend (LlmClient) -> String) {
+    private fun check(label: String, kind: String, action: suspend (LlmClient) -> String) {
         val cfg = store.activeProvider()
         if (cfg == null || cfg.model.isBlank()) {
             status.text = "Choose an API provider and model first."
@@ -72,8 +72,14 @@ class RuntimeActivity : AppCompatActivity() {
         }
         scope.launch {
             status.text = "$label: checking…"
-            try { status.text = "$label: works (${action(LlmClient(cfg)).take(80)})" }
-            catch (e: Exception) { status.text = "$label: failed — ${e.message.orEmpty().take(240)}" }
+            try {
+                val answer = action(LlmClient(cfg))
+                store.setCapability(cfg, kind, true)
+                status.text = "$label: works (${answer.take(80)})"
+            } catch (e: Exception) {
+                store.setCapability(cfg, kind, false)
+                status.text = "$label: failed — ${e.message.orEmpty().take(240)}"
+            }
         }
     }
 
