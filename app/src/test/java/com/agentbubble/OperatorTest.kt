@@ -53,9 +53,15 @@ class OperatorTest {
         var actions = 0
         var observations = 0
         var onObserve: (() -> Unit)? = null
+        var cheapChecks = 0
+        var onStableCheck: (() -> Int)? = null
         var result = "CLICKED"
         var onExecute: (() -> Unit)? = null
         override suspend fun observe(): ScreenObservation { observations++; onObserve?.invoke(); return screen }
+        override suspend fun currentStableKey(): Int {
+            cheapChecks++
+            return onStableCheck?.invoke() ?: observe().stableKey()
+        }
         override suspend fun execute(proposal: Proposal, observed: ScreenObservation): String {
             actions++
             onExecute?.invoke()
@@ -92,6 +98,20 @@ class OperatorTest {
         val result = runner.run("Open it", cfg, {}, { false })
         assertEquals(0, d.actions)
         assertTrue(result.contains("retry"))
+    }
+
+    @Test fun staleCheckCanAvoidAnExtraImageCapture() = runBlocking {
+        val d = FakeDevice(observation())
+        d.onStableCheck = { d.screen.stableKey() }
+        var calls = 0
+        val runner = ActionRunner(ctx, d, { _, _ ->
+            if (calls++ == 0) call("click_text", """{"text":"Open","exact":true}""")
+            else LlmToolResponse("Done", emptyList())
+        }, 0)
+        runner.run("Open it", cfg, {}, { true })
+        assertEquals(1, d.actions)
+        assertEquals(1, d.cheapChecks)
+        assertEquals("only initial and post-action observations need images", 2, d.observations)
     }
 
     @Test fun finalSendRequiresConfirmationAndCancellationStopsIt() = runBlocking {

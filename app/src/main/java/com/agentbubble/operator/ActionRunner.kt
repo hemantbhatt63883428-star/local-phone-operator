@@ -22,6 +22,13 @@ data class Proposal(val tool: String, val args: JSONObject, val reason: String) 
 
 interface ActionDevice {
     suspend fun observe(): ScreenObservation
+
+    /**
+     * Re-read only the window identity and accessibility structure for stale-action protection.
+     * Android overrides this cheap path; test and alternate devices safely fall back to observe().
+     */
+    suspend fun currentStableKey(): Int = observe().stableKey()
+
     suspend fun execute(proposal: Proposal, observed: ScreenObservation): String
 }
 
@@ -93,7 +100,7 @@ Never automate passwords, PINs, OTPs, CAPTCHA, authentication or secure screens.
             previousAction = fingerprint
             check(repeats < 3) { "No progress after repeated actions. Stopped." }
             // Every proposal is tied to the observed package, rotation, bounds and UI tree.
-            if (device.observe().stableKey() != screen.stableKey()) {
+            if (device.currentStableKey() != screen.stableKey()) {
                 last = "SCREEN_CHANGED: action rejected; inspect the fresh screen again."
                 appendToolTurn(messages, response, call, last)
                 continue
@@ -102,7 +109,7 @@ Never automate passwords, PINs, OTPs, CAPTCHA, authentication or secure screens.
                 if (!approve("${proposal.tool} ${proposal.args}\nTarget app: ${screen.packageName}\n\nConfirm this specific final action."))
                     return@withTimeout "Stopped: final action was not confirmed."
                 currentCoroutineContext().ensureActive()
-                if (device.observe().stableKey() != screen.stableKey()) {
+                if (device.currentStableKey() != screen.stableKey()) {
                     last = "SCREEN_CHANGED: confirmation expired; no action taken."
                     appendToolTurn(messages, response, call, last)
                     continue
@@ -145,6 +152,13 @@ private class AndroidActionDevice(private val ctx: Context) : ActionDevice {
         val km = ctx.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
         check(!km.isKeyguardLocked) { "Phone locked; unlock manually." }
         return service.observeScreen()
+    }
+
+    override suspend fun currentStableKey(): Int {
+        check(OperatorAccessibilityService.connected === service) { "Accessibility disconnected." }
+        val km = ctx.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+        check(!km.isKeyguardLocked) { "Phone locked; unlock manually." }
+        return service.currentScreenKey()
     }
 
     override suspend fun execute(proposal: Proposal, observed: ScreenObservation): String {

@@ -65,6 +65,25 @@ class OperatorAccessibilityService : AccessibilityService() {
             .thenByDescending { it.isActive }.thenByDescending { it.layer })
         .firstOrNull()
 
+    /**
+     * Cheap stale-action check: re-read the target window and accessibility tree without asking
+     * Android for another screenshot or encoding another JPEG.
+     */
+    fun currentScreenKey(): Int {
+        check(Build.VERSION.SDK_INT >= 34) { "Chat + Tasks screen images require Android 14 or newer." }
+        val target = targetWindow() ?: error("No external app window is visible.")
+        val root = target.root ?: error("Target app's accessibility tree is unavailable.")
+        val bounds = Rect().also { target.getBoundsInScreen(it) }
+        check(!bounds.isEmpty) { "Target window has no visible bounds." }
+        val rotation = (getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
+        return ScreenObservation.structureKey(
+            root.packageName?.toString().orEmpty(),
+            rotation,
+            bounds,
+            NodeTree.render(root, 300)
+        )
+    }
+
     /** Capture only the external app window, so this app's bubble and Stop panel stay out of frame. */
     suspend fun observeScreen(): ScreenObservation {
         check(Build.VERSION.SDK_INT >= 34) { "Chat + Tasks screen images require Android 14 or newer." }

@@ -32,8 +32,12 @@ data class ScreenObservation(
      * bytes are deliberately excluded: a blinking cursor or tiny animation changes JPEG bytes even
      * though every actionable target is still in the same place.
      */
-    fun stableKey(): Int =
-        listOf<Any>(packageName, rotation, windowBounds.toShortString(), tree).hashCode()
+    fun stableKey(): Int = structureKey(packageName, rotation, windowBounds, tree)
+
+    companion object {
+        fun structureKey(packageName: String, rotation: Int, windowBounds: Rect, tree: String): Int =
+            listOf<Any>(packageName, rotation, windowBounds.toShortString(), tree).hashCode()
+    }
 
     fun imageToDisplay(x: Int, y: Int): Pair<Int, Int> {
         require(x in 0 until imageWidth && y in 0 until imageHeight) { "Point is outside the observed image" }
