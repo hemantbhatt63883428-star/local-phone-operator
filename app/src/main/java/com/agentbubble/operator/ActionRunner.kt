@@ -106,7 +106,10 @@ Never automate passwords, PINs, OTPs, CAPTCHA, authentication or secure screens.
             }
             status("Doing: ${proposal.tool}")
             last = device.execute(proposal, screen)
-            if (!last.contains("FAILED") && !last.contains("BLOCKED") && !last.contains("NOT_FOUND")) actionCount++
+            if (last.startsWith("AMBIGUOUS_"))
+                return@withTimeout "Clarification needed: $last. Tell me which exact target you mean."
+            if (AutomationToolCatalog.isMutation(proposal.tool) &&
+                !last.contains("FAILED") && !last.contains("BLOCKED") && !last.contains("NOT_FOUND")) actionCount++
             appendToolTurn(messages, response, call, last)
             delay(settleMs)
         }

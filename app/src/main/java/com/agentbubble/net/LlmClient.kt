@@ -75,7 +75,8 @@ class LlmClient(private val cfg: ProviderConfig) {
 
     private fun endpoint(path: String): String {
         val base = normalizeBase(cfg.baseUrl)
-        if (base.isNotEmpty() && !base.startsWith("https://"))
+        val testLoopback = base.startsWith("http://localhost:") || base.startsWith("http://127.0.0.1:")
+        if (base.isNotEmpty() && !base.startsWith("https://") && !testLoopback)
             throw LlmException("An HTTPS API base URL is required.")
         return if (base.isEmpty()) "" else "$base$path"
     }

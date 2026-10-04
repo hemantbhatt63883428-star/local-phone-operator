@@ -45,10 +45,11 @@ class OperatorTest {
         var actions = 0
         var observations = 0
         var onObserve: (() -> Unit)? = null
+        var result = "CLICKED"
         override suspend fun observe(): ScreenObservation { observations++; onObserve?.invoke(); return screen }
         override suspend fun execute(proposal: Proposal, observed: ScreenObservation): String {
             actions++
-            return "CLICKED"
+            return result
         }
     }
 
@@ -104,6 +105,14 @@ class OperatorTest {
         val result = runner.run("Open it", cfg, {}, { true })
         assertEquals(1, d.actions)
         assertTrue(result.startsWith("Unverified:"))
+    }
+
+    @Test fun duplicateTargetStopsForClarification() = runBlocking {
+        val d = FakeDevice(observation()).apply { result = "AMBIGUOUS_TEXT: two matches" }
+        val runner = ActionRunner(ctx, d, { _, _ -> call("click_text", """{"text":"Amma"}""") }, 0)
+        val result = runner.run("Open Amma", cfg, {}, { true })
+        assertEquals(1, d.actions)
+        assertTrue(result.startsWith("Clarification needed:"))
     }
 
     @Test fun toolResponseAndFreshImageReachNextDecision() = runBlocking {

@@ -15,7 +15,7 @@ Run `gradle :app:testDebugUnitTest :app:assembleDebug` with Java 17 and Android 
 
 ## Installation compatibility
 
-The application ID remains `com.hemant.localoperator` and the version code is 3. The previous debug APK from workflow run 36617352683 has signing certificate SHA-256 `e9add27b8b97479ed670a0910a75c9f139a1976f4a9ec3f3753f640bb1f84b97`. Its signing keystore is not in the repository. A new CI debug APK is unlikely to use the same certificate, so Android will require uninstalling the old APK before installing this one. Uninstalling removes app data. A stable release signing key is needed for future in-place updates.
+The application ID remains `com.hemant.localoperator` and the version code is 3. The previous debug APK from workflow run 36617352683 has signing certificate SHA-256 `e9add27b8b97479ed670a0910a75c9f139a1976f4a9ec3f3753f640bb1f84b97`. Its signing keystore is not in the repository. The new API APK built in workflow run 37210116593 has a different signer, SHA-256 `241e59da4be2676a4b74b837e829f6481aafcc959c4c1f95ef75d1ddbdf2c16e`. Android cannot install it over the old APK; uninstall the old APK before installing this one. Uninstalling removes app data. A stable release signing key is needed for future in-place updates.
 
 ## Device validation
 
