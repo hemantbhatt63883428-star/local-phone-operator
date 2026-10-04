@@ -34,6 +34,7 @@ class OperatorTest {
     private val cfg = ProviderConfig("mock", "Mock", "https://example.test/v1", "key", "model")
 
     @Before fun keys() {
+        ctx.getSharedPreferences("agentbubble", Context.MODE_PRIVATE).edit().clear().commit()
         val key = javax.crypto.KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
         SecretVault.keyProvider = { key }
     }
@@ -151,6 +152,7 @@ class OperatorTest {
     @Test fun apiKeysAreEncrypted() {
         val store = SettingsStore(ctx)
         store.upsertProvider(cfg)
+        store.setActiveProvider(cfg.id)
         val disk = ctx.getSharedPreferences("agentbubble", Context.MODE_PRIVATE).getString("providers", "")!!
         assertFalse(disk.contains("\"key\""))
         assertEquals("key", store.activeProvider()?.apiKey)
