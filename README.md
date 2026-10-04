@@ -1,46 +1,22 @@
-# Local Phone Operator
+# Local Phone Operator — API edition
 
-Local-first Android AI operator prototype for Android 11+ using Android Accessibility and Google's LiteRT-LM.
+Android floating assistant based on the editable AgentBubble source. The app has exactly two modes:
 
-## Verified build
+- **Chat:** API conversation with saved history. Accessibility and device tools are never used.
+- **Chat + Tasks:** each request sends a fresh image of the target app window and its accessibility UI tree to the selected API model. The model may answer, ask a question, or call one device tool. Each action is followed by a fresh observation.
 
-GitHub Actions build #6 completed successfully on 2026-09-30 (India time):
+Configure an HTTPS OpenAI-compatible provider with a model that supports both image input and function calling. Settings has independent **Check chat**, **Check image input**, and **Check tool calling** probes. API keys are encrypted with Android Keystore before storage.
 
-- Android debug APK: built successfully
-- Unit tests: passed
-- Artifact: `LocalPhoneOperator-debug-apk`
+Chat + Tasks requires Android 14+ and the Accessibility service. Secure screens may refuse capture. Password and authentication screens are blocked. Normal navigation proceeds within the requested task; coordinate taps and final send, delete, purchase, and payment controls request confirmation. Stop cancels the API request and prevents subsequent actions.
 
-Build run:
-https://github.com/hemantbhatt63883428-star/local-phone-operator/actions/runs/36617352683
+## Build
 
-## What it does
+Run `gradle :app:testDebugUnitTest :app:assembleDebug` with Java 17 and Android SDK 35, or download the APK from the GitHub Actions build artifact. The Android project lives directly in this repository as editable source files.
 
-- Floating AI bubble
-- Natural-language task prompt
-- Accessibility UI-tree inspection
-- Generic tap / type / scroll / swipe / Back / Home / open-app tools
-- Optional screenshot + local vision-model fallback
-- Local LiteRT-LM planner model
-- Long multi-step task loop
-- Stop control
-- Password/PIN fields blocked
-- Sensitive side-effect controls gated by an owner toggle
+## Installation compatibility
 
-## Phone setup
+The application ID remains `com.hemant.localoperator` and the version code is 3. The previous debug APK from workflow run 36617352683 has signing certificate SHA-256 `e9add27b8b97479ed670a0910a75c9f139a1976f4a9ec3f3753f640bb1f84b97`. Its signing keystore is not in the repository. A new CI debug APK is unlikely to use the same certificate, so Android will require uninstalling the old APK before installing this one. Uninstalling removes app data. A stable release signing key is needed for future in-place updates.
 
-1. Install the debug APK from the successful GitHub Actions artifact.
-2. Open **Local Phone Operator**.
-3. Tap **Open Accessibility Settings** and enable **Local Phone Operator**.
-4. Import a planner `.litertlm` model with tool/function-calling capability.
-5. Optionally import a multimodal vision `.litertlm` model.
-6. Tap the floating **AI** bubble, enter a task, and press **Run**.
+## Device validation
 
-Example:
-
-> Open Telegram, find Amma group, search files containing xxx, download every match, continue until the end, and verify completion.
-
-## Important
-
-The app binary builds and its unit tests pass, but universal Android automation still requires real-device testing across the apps you want to control. Secure windows, authentication prompts, CAPTCHA, and protected system flows are intentionally not bypassed.
-
-The current repository stores the source archive as verified base64 chunks and reconstructs it during CI. The source archive SHA-256 is stored in `SOURCE_SHA256.txt`.
+The CI build does not prove real-device automation. On a Samsung A9 with Android 14+, verify Accessibility consent, target-window capture, image coordinate mapping, rotation, secure-window errors, Stop cancellation, and execution in the apps you intend to use.

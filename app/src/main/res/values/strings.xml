@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Agent Bubble</string>
+    <string name="accessibility_label">Agent Bubble — screen control</string>
+    <string name="accessibility_desc">Lets the Agent Bubble AI read what is on your screen and tap, type, scroll and navigate apps for you. Required for screen vision and hands-free task execution. No data is collected by the app itself.</string>
+<string name="operator_disclosure">Only during an Action task, Agent Bubble reads the current screen and performs steps you approve. API mode sends screen text to your selected provider. Chat never reads or controls your phone. Stop ends the run. Authentication screens are blocked.</string>
+</resources>

@@ -1,0 +1,3 @@
+-keep class com.agentbubble.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**
