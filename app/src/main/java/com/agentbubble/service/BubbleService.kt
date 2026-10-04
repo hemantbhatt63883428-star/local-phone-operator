@@ -528,8 +528,11 @@ class BubbleService : Service() {
                 result = "Task stopped: " + (e.message ?: e.javaClass.simpleName).take(400)
             } finally {
                 com.agentbubble.data.SessionStore.append(this@BubbleService, session, "assistant", result)
-                control.finish(result)
+                control.remove()
+                actionPanel = null
+                actionJob = null
                 onWorkState(false)
+                if (running) openChat()
             }
         }
     }

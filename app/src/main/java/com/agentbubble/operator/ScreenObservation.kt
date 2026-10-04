@@ -26,8 +26,8 @@ data class ScreenObservation(
             JSONObject().put("url", "data:image/jpeg;base64,$jpegBase64")))
 
     /** Observation IDs are tied to the image and UI tree, not wall-clock time. */
-    fun stableKey(): Int = arrayOf(packageName, rotation, windowBounds.toShortString(), tree,
-        jpegBase64).contentHashCode()
+    fun stableKey(): Int = listOf<Any>(packageName, rotation, windowBounds.toShortString(), tree,
+        jpegBase64).hashCode()
 
     fun imageToDisplay(x: Int, y: Int): Pair<Int, Int> {
         require(x in 0 until imageWidth && y in 0 until imageHeight) { "Point is outside the observed image" }
