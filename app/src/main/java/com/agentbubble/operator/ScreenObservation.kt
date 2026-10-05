@@ -13,11 +13,13 @@ data class ScreenObservation(
     val imageWidth: Int,
     val imageHeight: Int,
     val jpegBase64: String,
-    val tree: String
+    val tree: String,
+    val imageStatus: String = ""
 ) {
     fun description(): String = "ACTIVE_PACKAGE=$packageName\nCAPTURED_AT_MS=$capturedAt " +
         "ROTATION=$rotation IMAGE=${imageWidth}x${imageHeight} " +
-        "WINDOW_BOUNDS=${windowBounds.left},${windowBounds.top},${windowBounds.right},${windowBounds.bottom}\n$tree"
+        "WINDOW_BOUNDS=${windowBounds.left},${windowBounds.top},${windowBounds.right},${windowBounds.bottom}\n" +
+        (if (imageStatus.isBlank()) "" else "$imageStatus\n") + tree
 
     fun content(lastResult: String): JSONArray = JSONArray().apply {
         put(JSONObject().put("type", "text").put("text",

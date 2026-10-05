@@ -16,6 +16,7 @@ import com.agentbubble.operator.ActionRunner
 import com.agentbubble.operator.Proposal
 import com.agentbubble.operator.ScreenObservation
 import com.agentbubble.operator.ScreenCapturePolicy
+import com.agentbubble.operator.CaptureGeometry
 import com.agentbubble.operator.SafetyPolicy
 import com.agentbubble.operator.TaskPolicy
 import kotlinx.coroutines.CompletableDeferred
@@ -289,6 +290,55 @@ class OperatorTest {
         assertEquals(1500L, ScreenCapturePolicy.retryDelayMs(1))
         assertTrue(ScreenCapturePolicy.failureMessage(3).contains("rate limit", ignoreCase = true))
         assertTrue(ScreenCapturePolicy.failureMessage(6).contains("secure", ignoreCase = true))
+        assertTrue(ScreenCapturePolicy.mayFallbackToDisplay(1))
+        assertTrue(ScreenCapturePolicy.mayFallbackToDisplay(5))
+        assertFalse("secure windows must never use display fallback",
+            ScreenCapturePolicy.mayFallbackToDisplay(6))
+    }
+
+    @Test fun displayFallbackCropsToTargetWindow() {
+        assertEquals(Rect(50, 100, 150, 300),
+            CaptureGeometry.cropRect(Rect(100, 200, 300, 600), 400, 800, 200, 400))
+        assertThrows(IllegalStateException::class.java) {
+            CaptureGeometry.cropRect(Rect(500, 0, 600, 100), 400, 800, 200, 400)
+        }
+    }
+
+    @Test fun observationRestoresOverlaysWhenCaptureFails() = runBlocking {
+        var hidden = false
+        var restored = false
+        val brokenDevice = object : ActionDevice {
+            override suspend fun observe(): ScreenObservation =
+                throw IllegalStateException("Capture backend failed")
+            override suspend fun execute(proposal: Proposal, observed: ScreenObservation): String =
+                error("No action should run")
+        }
+        val runner = ActionRunner(ctx, brokenDevice,
+            { _, _ -> error("No API call expected") }, 0,
+            beforeObserve = { hidden = true },
+            afterObserve = { restored = hidden; hidden = false })
+        try {
+            runner.run("What is on screen?", cfg, {}, { false })
+            fail("Expected capture failure")
+        } catch (_: IllegalStateException) {
+            assertTrue(restored)
+            assertFalse(hidden)
+        }
+    }
+
+    @Test fun treeOnlyScreenCanUseTextButCannotTapCoordinates() = runBlocking {
+        val screen = observation(jpeg = "")
+        val device = FakeDevice(screen)
+        var calls = 0
+        val runner = ActionRunner(ctx, device, { _, _ ->
+            when (calls++) {
+                0 -> call("tap", """{"x":1,"y":1}""")
+                1 -> call("click_text", """{"text":"Open","exact":true}""")
+                else -> LlmToolResponse("Done", emptyList())
+            }
+        }, 0)
+        runner.run("Open it", cfg, {}, { false })
+        assertEquals(1, device.actions)
     }
 
     @Test fun taskModeRequiresAllCapabilitiesForTheCurrentCredentials() {

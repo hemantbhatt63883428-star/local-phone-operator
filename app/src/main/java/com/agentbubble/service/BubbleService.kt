@@ -542,7 +542,12 @@ class BubbleService : Service() {
                         setActionWindowsHidden(true)
                         kotlinx.coroutines.delay(120)
                     },
-                    afterExecute = { setActionWindowsHidden(false) }
+                    afterExecute = { setActionWindowsHidden(false) },
+                    beforeObserve = {
+                        setActionWindowsHidden(true)
+                        kotlinx.coroutines.delay(120)
+                    },
+                    afterObserve = { setActionWindowsHidden(false) }
                 ).run(task, cfg, { control.status(it) }, { control.approve(it) }, priorTurns)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 result = "Stopped or timed out. No further actions will run. An already-dispatched gesture may finish."

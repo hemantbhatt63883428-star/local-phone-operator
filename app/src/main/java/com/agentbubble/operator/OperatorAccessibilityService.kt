@@ -2,7 +2,9 @@ package com.agentbubble.operator
 
 import android.accessibilityservice.AccessibilityService
 import android.graphics.Bitmap
+import android.graphics.Point
 import android.graphics.Rect
+import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.SystemClock
 import android.util.Base64
@@ -27,6 +29,9 @@ internal object ScreenCapturePolicy {
 
     fun retryDelayMs(attempt: Int): Long = MIN_INTERVAL_MS * (attempt + 1)
 
+    /** Some Android builds fail window capture while display capture remains available. */
+    fun mayFallbackToDisplay(errorCode: Int): Boolean = errorCode == 1 || errorCode == 5
+
     fun failureMessage(errorCode: Int): String = when (errorCode) {
         1 -> "Android screenshot service failed internally. Try again."
         2 -> "Screenshot access is unavailable. Disable and re-enable Accessibility access."
@@ -42,6 +47,31 @@ private data class ScreenshotAttempt(
     val result: AccessibilityService.ScreenshotResult? = null,
     val errorCode: Int? = null
 )
+
+private data class CapturedScreenshot(
+    val result: AccessibilityService.ScreenshotResult,
+    val fullDisplay: Boolean
+)
+
+private class ScreenCaptureFailure(val errorCode: Int, message: String) : IllegalStateException(message)
+
+/** Convert display coordinates into the bitmap's pixels, accounting for display scaling. */
+internal object CaptureGeometry {
+    fun cropRect(windowBounds: Rect, displayWidth: Int, displayHeight: Int, bitmapWidth: Int, bitmapHeight: Int): Rect {
+        require(displayWidth > 0 && displayHeight > 0 && bitmapWidth > 0 && bitmapHeight > 0)
+        val visible = Rect(windowBounds)
+        check(visible.intersect(0, 0, displayWidth, displayHeight)) {
+            "Target window is outside the captured display."
+        }
+        val left = (visible.left.toLong() * bitmapWidth / displayWidth).toInt().coerceIn(0, bitmapWidth - 1)
+        val top = (visible.top.toLong() * bitmapHeight / displayHeight).toInt().coerceIn(0, bitmapHeight - 1)
+        val right = ((visible.right.toLong() * bitmapWidth + displayWidth - 1) / displayWidth)
+            .toInt().coerceIn(left + 1, bitmapWidth)
+        val bottom = ((visible.bottom.toLong() * bitmapHeight + displayHeight - 1) / displayHeight)
+            .toInt().coerceIn(top + 1, bitmapHeight)
+        return Rect(left, top, right, bottom)
+    }
+}
 
 /** Passive unless a user explicitly starts an Action task. No overlay or polling on connect. */
 class OperatorAccessibilityService : AccessibilityService() {
@@ -89,33 +119,71 @@ class OperatorAccessibilityService : AccessibilityService() {
         check(NodeTree.snapshot(root, 500).none { it.password || SafetyPolicy.protectedText(it.text + " " + it.description + " " + it.viewId) }) {
             "Authentication screen detected; its image was not sent to the provider. Continue manually."
         }
-        val capture = captureWindow(target.id)
+        val rotation = (getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
+        val capture = try {
+            captureWindowOrDisplay(target.id, target.displayId)
+        } catch (e: ScreenCaptureFailure) {
+            if (e.errorCode == 6) throw e // secure content must never enter the model request
+            return ScreenObservation(pkg, System.currentTimeMillis(), rotation, bounds, 1, 1,
+                "", tree, "Screenshot unavailable: ${e.message}. Accessibility text only.")
+        }
+        // The target can change while Android is capturing. Never bind a fresh image to stale UI nodes.
+        val current = targetWindow()
+        if (current == null) {
+            capture.result.hardwareBuffer.close()
+            error("Target app changed during screen capture. Try again.")
+        }
+        val currentBounds = Rect().also { current.getBoundsInScreen(it) }
+        if (current.id != target.id || current.root?.packageName?.toString() != pkg ||
+            currentBounds != bounds ||
+            (getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation != rotation) {
+            capture.result.hardwareBuffer.close()
+            error("Target app changed during screen capture. Try again.")
+        }
+        val displaySize = if (capture.fullDisplay) {
+            val display = (getSystemService(DISPLAY_SERVICE) as DisplayManager).getDisplay(target.displayId)
+            if (display == null) {
+                capture.result.hardwareBuffer.close()
+                error("The target display is no longer available.")
+            }
+            Point().also { display.getRealSize(it) }
+        } else null
         return withContext(Dispatchers.Default) {
-            val buffer = capture.hardwareBuffer
+            val buffer = capture.result.hardwareBuffer
             val raw = try {
-                Bitmap.wrapHardwareBuffer(buffer, capture.colorSpace)?.copy(Bitmap.Config.ARGB_8888, false)
+                Bitmap.wrapHardwareBuffer(buffer, capture.result.colorSpace)?.copy(Bitmap.Config.ARGB_8888, false)
                     ?: error("Could not read captured window image")
             } finally { buffer.close() }
             try {
-                // The accessibility tree carries exact text and bounds. The image only needs to
-                // preserve visual layout, icons and controls, so keep it deliberately economical.
-                val ratio = minOf(1f, MAX_SCREEN_IMAGE_EDGE / maxOf(raw.width, raw.height))
-                val width = (raw.width * ratio).toInt().coerceAtLeast(1)
-                val height = (raw.height * ratio).toInt().coerceAtLeast(1)
-                val scaled = if (ratio < 1f) Bitmap.createScaledBitmap(raw, width, height, true) else raw
-                val bytes = ByteArrayOutputStream().use { stream ->
-                    check(scaled.compress(Bitmap.CompressFormat.JPEG, SCREEN_JPEG_QUALITY, stream)) { "Could not encode screen image" }
-                    stream.toByteArray()
-                }
-                if (scaled !== raw) scaled.recycle()
-                val rotation = (getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
-                ScreenObservation(pkg, System.currentTimeMillis(), rotation, bounds, width, height,
-                    Base64.encodeToString(bytes, Base64.NO_WRAP), tree)
+                val crop = if (displaySize != null) {
+                    val area = CaptureGeometry.cropRect(
+                        bounds, displaySize.x, displaySize.y, raw.width, raw.height
+                    )
+                    Bitmap.createBitmap(raw, area.left, area.top, area.width(), area.height())
+                } else raw
+                try {
+                    // The accessibility tree carries exact text and bounds. Keep the image economical.
+                    val ratio = minOf(1f, MAX_SCREEN_IMAGE_EDGE / maxOf(crop.width, crop.height))
+                    val width = (crop.width * ratio).toInt().coerceAtLeast(1)
+                    val height = (crop.height * ratio).toInt().coerceAtLeast(1)
+                    val scaled = if (ratio < 1f) Bitmap.createScaledBitmap(crop, width, height, true) else crop
+                    val bytes = ByteArrayOutputStream().use { stream ->
+                        check(scaled.compress(Bitmap.CompressFormat.JPEG, SCREEN_JPEG_QUALITY, stream)) {
+                            "Could not encode screen image"
+                        }
+                        stream.toByteArray()
+                    }
+                    if (scaled !== crop) scaled.recycle()
+                    ScreenObservation(pkg, System.currentTimeMillis(), rotation, bounds, width, height,
+                        Base64.encodeToString(bytes, Base64.NO_WRAP), tree)
+                } finally { if (crop !== raw) crop.recycle() }
             } finally { raw.recycle() }
         }
     }
 
-    private suspend fun captureWindow(windowId: Int): AccessibilityService.ScreenshotResult {
+    private suspend fun captureWindowOrDisplay(windowId: Int, displayId: Int): CapturedScreenshot {
+        var useDisplay = false
+        var lastError = 1
         for (attempt in 0 until ScreenCapturePolicy.MAX_ATTEMPTS) {
             val elapsed = SystemClock.elapsedRealtime() - lastScreenshotRequestAtMs
             val waitMs = ScreenCapturePolicy.MIN_INTERVAL_MS - elapsed
@@ -123,25 +191,36 @@ class OperatorAccessibilityService : AccessibilityService() {
             lastScreenshotRequestAtMs = SystemClock.elapsedRealtime()
 
             val outcome = suspendCancellableCoroutine<ScreenshotAttempt> { cont ->
-                takeScreenshotOfWindow(windowId, mainExecutor, object : TakeScreenshotCallback {
+                val callback = object : TakeScreenshotCallback {
                     override fun onSuccess(result: ScreenshotResult) {
                         if (cont.isActive) cont.resume(ScreenshotAttempt(result = result))
+                        else result.hardwareBuffer.close()
                     }
-
                     override fun onFailure(errorCode: Int) {
                         if (cont.isActive) cont.resume(ScreenshotAttempt(errorCode = errorCode))
                     }
-                })
+                }
+                try {
+                    if (useDisplay) takeScreenshot(displayId, mainExecutor, callback)
+                    else takeScreenshotOfWindow(windowId, mainExecutor, callback)
+                } catch (_: RuntimeException) {
+                    if (cont.isActive) cont.resume(ScreenshotAttempt(errorCode = 1))
+                }
             }
-            outcome.result?.let { return it }
-            val errorCode = outcome.errorCode ?: 1
-            if (ScreenCapturePolicy.shouldRetry(errorCode, attempt)) {
+            outcome.result?.let { return CapturedScreenshot(it, useDisplay) }
+            lastError = outcome.errorCode ?: 1
+            if (!useDisplay && ScreenCapturePolicy.mayFallbackToDisplay(lastError)) {
+                useDisplay = true
+                continue
+            }
+            if (ScreenCapturePolicy.shouldRetry(lastError, attempt)) {
                 delay(ScreenCapturePolicy.retryDelayMs(attempt))
-            } else {
-                throw IllegalStateException(ScreenCapturePolicy.failureMessage(errorCode))
+                continue
             }
+            break
         }
-        error("Screen capture retry exhausted.")
+        throw ScreenCaptureFailure(lastError, ScreenCapturePolicy.failureMessage(lastError) +
+            if (useDisplay) " Display capture also failed." else "")
     }
 
     /**
