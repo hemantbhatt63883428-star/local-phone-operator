@@ -1,50 +1,46 @@
-name: Build Local Phone Operator APK
+name: Build API Phone Operator APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Reconstruct source archive
-        shell: bash
-        run: |
-          cat source_parts/part1.b64 source_parts/part2.b64 source_parts/part3.b64 source_parts/part4.b64 source_parts/part5.b64 source_parts/part6.b64 | base64 -d > LocalPhoneOperator-v1.1-source.zip
-          sha256sum -c SOURCE_SHA256.txt
-          unzip -q LocalPhoneOperator-v1.1-source.zip
-          test -f LocalPhoneOperator/app/build.gradle.kts
-
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Setup Gradle 8.14.4
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.4'
-
-      - name: Build debug APK
-        working-directory: LocalPhoneOperator
-        run: gradle :app:assembleDebug --stacktrace
-
-      - name: Run unit tests
-        working-directory: LocalPhoneOperator
+      - name: Unit tests
         run: gradle :app:testDebugUnitTest --stacktrace
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
-          name: LocalPhoneOperator-v1.1-debug-apk
-          path: LocalPhoneOperator/app/build/outputs/apk/debug/*.apk
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LocalPhoneOperator-api-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error

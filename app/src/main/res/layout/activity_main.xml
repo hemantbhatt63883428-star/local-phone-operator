@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="18dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textColor="@color/text"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="API chat and screen-aware phone tasks."
+            android:textColor="@color/text_dim"
+            android:textSize="12sp" />
+
+        <!-- AI -->
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="Your AI"
+            android:textColor="@color/text"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvAi"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@color/bg_panel"
+            android:padding="12dp"
+            android:textColor="@color/text"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btnChooseModel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Choose model (API key → model list → search)"
+            android:textColor="@color/accent"
+            android:textSize="13sp" />
+
+        <Button android:id="@+id/btnRuntime" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="API checks · Chat + Tasks setup" />
+        <!-- bubble -->
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Bubble"
+            android:textColor="@color/text"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvPermissions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@color/bg_panel"
+            android:padding="12dp"
+            android:textColor="@color/text_dim"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnBubblePermission"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Allow “Display over other apps”"
+            android:textColor="@color/amber"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btnStartBubble"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Show the bubble"
+            android:textColor="@color/accent"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tvBubbleSize"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Bubble size: 60 dp"
+            android:textColor="@color/text"
+            android:textSize="13sp" />
+
+        <SeekBar
+            android:id="@+id/sbBubbleSize"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/btnResetLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Reset bubble size, position and chat size"
+            android:textColor="@color/text_dim"
+            android:textSize="12sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Tip: drag the left edge of the chat to make it wider, the top edge to make it taller. Hold the bubble for 2 seconds to close it."
+            android:textColor="@color/text_dim"
+            android:textSize="11sp" />
+
+    </LinearLayout>
+</ScrollView>

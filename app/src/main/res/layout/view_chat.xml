@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/panel"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_panel_card">
+
+    <!-- Chat content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginStart="18dp"
+        android:orientation="vertical"
+        android:paddingStart="4dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="8dp">
+
+        <!-- Header. Drag it to move the whole card. The id also keeps this row above the keyboard. -->
+        <LinearLayout
+            android:id="@+id/headerRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/ic_bubble" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="Local Phone Operator"
+                    android:textColor="@color/text"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/subtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/text_dim"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnVision"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Chats"
+                android:padding="9dp"
+                android:src="@android:drawable/ic_menu_recent_history"
+                app:tint="@color/text_dim" />
+
+            <ImageButton
+                android:id="@+id/btnNew"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="New chat"
+                app:tint="@color/text_dim"
+                android:padding="9dp"
+                android:src="@android:drawable/ic_menu_add" />
+
+            <!-- Close: big tap target, filled background so it is obvious -->
+            <ImageButton
+                android:id="@+id/btnCollapse"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="2dp"
+                android:background="@drawable/bg_close_button"
+                android:contentDescription="Close the chat"
+                android:padding="11dp"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                app:tint="@color/text" />
+        </LinearLayout>
+
+        <!-- Explicit controls: one of the two modes, and one of the two AI sources. -->
+        <LinearLayout
+            android:id="@+id/chipRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                android:text="MODE"
+                android:textColor="@color/text_dim"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btnChatMode"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:text="Chat"
+                    android:textSize="11sp" />
+                <Button
+                    android:id="@+id/btnAutomationMode"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:text="Chat + Tasks"
+                    android:textSize="11sp" />
+            </LinearLayout>
+            <Button
+                android:id="@+id/btnSetupAi"
+                android:layout_width="match_parent"
+                android:layout_height="38dp"
+                android:text="Configure models &amp; permissions"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="8dp"
+            android:background="@color/stroke" />
+
+        <!-- Body: the conversation and the chat list share the same space -->
+        <FrameLayout
+            android:id="@+id/bodyBox"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:id="@+id/conversationBox"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <!-- Messages -->
+                <ScrollView
+                    android:id="@+id/scroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:paddingTop="6dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/msgList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </ScrollView>
+
+                <!-- Input. The id is used to keep this row above the keyboard. -->
+                <LinearLayout
+                    android:id="@+id/inputRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btnMic"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Voice"
+                        android:padding="8dp"
+                        android:src="@android:drawable/ic_btn_speak_now" />
+
+                    <EditText
+                        android:id="@+id/input"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_input"
+                        android:hint="Type your message…"
+                        android:imeOptions="actionSend|flagNoExtractUi"
+                        android:importantForAutofill="no"
+                        android:inputType="textCapSentences"
+                        android:maxLines="4"
+                        android:minHeight="42dp"
+                        android:paddingStart="14dp"
+                        android:paddingTop="10dp"
+                        android:paddingEnd="14dp"
+                        android:paddingBottom="10dp"
+                        android:textColor="@color/text"
+                        android:textColorHint="@color/text_dim"
+                        android:textSize="14sp" />
+
+                    <ImageButton
+                        android:id="@+id/btnSend"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:layout_marginStart="4dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Send"
+                        android:padding="8dp"
+                        android:src="@android:drawable/ic_menu_send" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- The chat list (history) — filled in by code, shown instead of the conversation -->
+            <LinearLayout
+                android:id="@+id/historyBox"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/historyTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Chats"
+                        android:textColor="@color/text"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <ImageButton
+                        android:id="@+id/btnHistoryNew"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="New chat"
+                        android:padding="8dp"
+                        android:src="@android:drawable/ic_menu_add"
+                        app:tint="@color/accent" />
+
+                    <ImageButton
+                        android:id="@+id/btnHistoryBack"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Back to the chat"
+                        android:padding="8dp"
+                        android:src="@android:drawable/ic_menu_revert"
+                        app:tint="@color/text_dim" />
+                </LinearLayout>
+
+                <ScrollView
+                    android:id="@+id/historyScroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:paddingTop="4dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/historyList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </ScrollView>
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Top grip: drag up/down to change the height -->
+    <FrameLayout
+        android:id="@+id/dragHandleTop"
+        android:layout_width="match_parent"
+        android:layout_height="22dp"
+        android:layout_gravity="top"
+        android:contentDescription="Drag to change height">
+    </FrameLayout>
+
+    <View
+        android:layout_width="56dp"
+        android:layout_height="4dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="7dp"
+        android:background="@drawable/bg_grip"
+        android:importantForAccessibility="no" />
+
+    <!-- Resize grip: drag left/right -->
+    <FrameLayout
+        android:id="@+id/dragHandle"
+        android:layout_width="20dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:contentDescription="Drag to resize" />
+
+    <View
+        android:layout_width="4dp"
+        android:layout_height="56dp"
+        android:layout_gravity="start|center_vertical"
+        android:layout_marginStart="5dp"
+        android:background="@drawable/bg_grip"
+        android:importantForAccessibility="no" />
+</FrameLayout>

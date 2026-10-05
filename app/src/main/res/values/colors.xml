@@ -1,0 +1,15 @@
+<resources>
+    <color name="bg">#FF0E1116</color>
+    <color name="bg_panel">#FF161B22</color>
+    <color name="bg_input">#FF20262E</color>
+    <color name="stroke">#FF2A313A</color>
+    <color name="accent">#FF4C8DFF</color>
+    <color name="accent_dim">#FF2B4C7E</color>
+    <color name="green">#FF31C48D</color>
+    <color name="red">#FFF05A5A</color>
+    <color name="amber">#FFF2B544</color>
+    <color name="text">#FFE9EDF3</color>
+    <color name="text_dim">#FF8B94A3</color>
+    <color name="user_bubble">#FF2B4C7E</color>
+    <color name="ai_bubble">#FF1B2129</color>
+</resources>
