@@ -6,9 +6,9 @@ import androidx.test.core.app.ApplicationProvider
 import com.agentbubble.data.ProviderConfig
 import com.agentbubble.data.Session
 import com.agentbubble.data.SessionStore
-import com.agentbubble.data.Turn
 import com.agentbubble.data.SecretVault
 import com.agentbubble.data.SettingsStore
+import com.agentbubble.data.Turn
 import com.agentbubble.net.LlmToolCall
 import com.agentbubble.net.LlmToolResponse
 import com.agentbubble.operator.ActionDevice
@@ -17,6 +17,7 @@ import com.agentbubble.operator.Proposal
 import com.agentbubble.operator.ScreenObservation
 import com.agentbubble.operator.ScreenCapturePolicy
 import com.agentbubble.operator.SafetyPolicy
+import com.agentbubble.operator.TaskPolicy
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
@@ -100,6 +101,58 @@ class OperatorTest {
         assertTrue(result.contains("retry"))
     }
 
+    @Test fun greetingWorksWhenNoExternalWindowExists() = runBlocking {
+        var actions = 0
+        val d = object : ActionDevice {
+            override suspend fun observe(): ScreenObservation =
+                throw IllegalStateException("No external app window is visible.")
+            override suspend fun execute(proposal: Proposal, observed: ScreenObservation): String {
+                actions++
+                return "unexpected"
+            }
+        }
+        val runner = ActionRunner(ctx, d, { messages, _ ->
+            val content = messages.getJSONObject(messages.length() - 1).getJSONArray("content")
+            assertEquals("no fake image should be sent", 1, content.length())
+            assertTrue(content.toString().contains("NO_EXTERNAL_APP_WINDOW"))
+            LlmToolResponse("Hi! How can I help?", emptyList())
+        }, 0)
+        assertEquals("Hi! How can I help?", runner.run("Hii", cfg, {}, { false }))
+        assertEquals(0, actions)
+    }
+
+    @Test fun bulkWorkflowRemembersDeduplicatesAndRequiresVisibleDownloadEvidence() = runBlocking {
+        val d = FakeDevice(observation("#0 t=LCM 30 Days Downloaded\n#1 t=HCF 30 Days Downloaded"))
+        var calls = 0
+        val runner = ActionRunner(ctx, d, { _, _ ->
+            when (calls++) {
+                0 -> call("remember_items", """{"items":[{"name":"LCM 30 Days"},{"name":"lcm-30 days"},{"name":"HCF 30 Days"}]}""")
+                1 -> call("update_item_status", """{"name":"LCM 30 Days","status":"downloaded","evidence":"LCM 30 Days Downloaded"}""")
+                2 -> call("update_item_status", """{"name":"HCF 30 Days","status":"downloaded","evidence":"HCF 30 Days Downloaded"}""")
+                else -> call("finish", """{"summary":"Files saved","evidence":"HCF 30 Days Downloaded"}""")
+            }
+        }, 0)
+        val result = runner.run("Download all LCM and HCF files", cfg, {}, { true })
+        assertTrue(result.startsWith("Completed: all 2 recorded item"))
+        assertEquals(0, d.actions)
+    }
+
+    @Test fun bulkWorkflowCannotFinishWithPendingRecordedFiles() = runBlocking {
+        val d = FakeDevice(observation("#0 t=LCM sheet"))
+        var calls = 0
+        val runner = ActionRunner(ctx, d, { _, _ ->
+            if (calls++ == 0) call("remember_items", """{"items":[{"name":"LCM sheet"}]}""")
+            else call("finish", """{"summary":"Done","evidence":"LCM sheet"}""")
+        }, 0)
+        val result = runner.run("Download all files", cfg, {}, { true })
+        assertTrue(result.startsWith("Incomplete:"))
+    }
+
+    @Test fun bulkTaskGetsLongerBoundedBudget() {
+        assertEquals(120, TaskPolicy.stepLimit("Aman chat se saare files download karo"))
+        assertEquals(40, TaskPolicy.stepLimit("Open Telegram"))
+    }
+
     @Test fun staleCheckCanAvoidAnExtraImageCapture() = runBlocking {
         val d = FakeDevice(observation())
         d.onStableCheck = { d.screen.stableKey() }
@@ -111,7 +164,7 @@ class OperatorTest {
         runner.run("Open it", cfg, {}, { true })
         assertEquals(1, d.actions)
         assertEquals(1, d.cheapChecks)
-        assertEquals("only initial and post-action observations need images", 2, d.observations)
+        assertEquals(2, d.observations)
     }
 
     @Test fun finalSendRequiresConfirmationAndCancellationStopsIt() = runBlocking {
@@ -172,8 +225,7 @@ class OperatorTest {
         assertEquals(60 to 120, shot.imageToDisplay(25, 50))
         assertThrows(IllegalArgumentException::class.java) { shot.imageToDisplay(50, 0) }
         assertNotEquals(shot.stableKey(), observation(rotation = 1).stableKey())
-        assertEquals("cursor or animation pixels must not reject an unchanged UI",
-            shot.stableKey(), observation(jpeg = "different-frame").stableKey())
+        assertEquals(shot.stableKey(), observation(jpeg = "different-frame").stableKey())
     }
 
     @Test fun operatorWindowsAreRestoredAfterExecution() = runBlocking {
@@ -195,7 +247,7 @@ class OperatorTest {
         device.onExecute = { actionSawHiddenWindows = hidden }
         runner.run("Open it", cfg, {}, { true })
         assertTrue(actionSawHiddenWindows)
-        assertFalse("operator windows must be visible again", hidden)
+        assertFalse(hidden)
     }
 
     @Test fun completeChatExportsAsReadableText() {

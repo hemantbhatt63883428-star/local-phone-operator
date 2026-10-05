@@ -19,24 +19,36 @@ data class ScreenObservation(
         "ROTATION=$rotation IMAGE=${imageWidth}x${imageHeight} " +
         "WINDOW_BOUNDS=${windowBounds.left},${windowBounds.top},${windowBounds.right},${windowBounds.bottom}\n$tree"
 
-    fun content(lastResult: String): JSONArray = JSONArray()
-        .put(JSONObject().put("type", "text").put("text",
+    fun content(lastResult: String): JSONArray = JSONArray().apply {
+        put(JSONObject().put("type", "text").put("text",
             "Last result: $lastResult\nUNTRUSTED CURRENT SCREEN:\n${description().take(24000)}"))
-        .put(JSONObject().put("type", "image_url").put("image_url",
-            JSONObject()
-                .put("url", "data:image/jpeg;base64,$jpegBase64")
-                .put("detail", "low")))
+        if (jpegBase64.isNotBlank()) {
+            put(JSONObject().put("type", "image_url").put("image_url",
+                JSONObject()
+                    .put("url", "data:image/jpeg;base64,$jpegBase64")
+                    .put("detail", "low")))
+        }
+    }
 
-    /**
-     * Reject an action when the target window or accessibility layout changed. Compressed image
-     * bytes are deliberately excluded: a blinking cursor or tiny animation changes JPEG bytes even
-     * though every actionable target is still in the same place.
-     */
+    fun hasImage(): Boolean = jpegBase64.isNotBlank()
+
+    /** Tiny animation/JPEG differences must not invalidate an otherwise identical UI target. */
     fun stableKey(): Int = structureKey(packageName, rotation, windowBounds, tree)
 
     companion object {
         fun structureKey(packageName: String, rotation: Int, windowBounds: Rect, tree: String): Int =
             listOf<Any>(packageName, rotation, windowBounds.toShortString(), tree).hashCode()
+
+        fun unavailable(reason: String): ScreenObservation = ScreenObservation(
+            packageName = "none",
+            capturedAt = System.currentTimeMillis(),
+            rotation = 0,
+            windowBounds = Rect(0, 0, 1, 1),
+            imageWidth = 1,
+            imageHeight = 1,
+            jpegBase64 = "",
+            tree = "NO_EXTERNAL_APP_WINDOW: $reason. Normal conversation and open_app are still available."
+        )
     }
 
     fun imageToDisplay(x: Int, y: Int): Pair<Int, Int> {

@@ -64,10 +64,7 @@ class ActionPanel(private val ctx: Context, private val stop: () -> Unit, privat
     }
     fun cancelApproval() { waiting?.complete(false); waiting = null; allow.visibility = View.GONE }
 
-    /**
-     * Accessibility fallback gestures are real screen gestures. Make this overlay fully transparent
-     * and non-touchable for that short dispatch so the app underneath receives the gesture.
-     */
+    /** Let fallback gestures reach the app underneath this overlay. */
     fun setHiddenForAction(hidden: Boolean) {
         if (!attached) return
         root.visibility = if (hidden) View.INVISIBLE else View.VISIBLE

@@ -97,6 +97,28 @@ class LlmClient(private val cfg: ProviderConfig) {
         return o
     }
 
+    /** Providers place final text in several OpenAI-compatible fields, especially reasoning models. */
+    private fun messageText(msg: JSONObject, choice: JSONObject? = null): String {
+        val primary = when (val c = msg.opt("content")) {
+            null, JSONObject.NULL -> ""
+            is String -> c
+            is JSONArray -> buildString {
+                for (i in 0 until c.length()) {
+                    when (val part = c.opt(i)) {
+                        is String -> append(part)
+                        is JSONObject -> append(part.optString("text").ifBlank { part.optString("content") })
+                    }
+                }
+            }
+            else -> c.toString()
+        }.trim()
+        if (primary.isNotBlank()) return primary
+        return sequenceOf("reasoning_content", "reasoning", "refusal")
+            .map { msg.optString(it).trim() }
+            .firstOrNull { it.isNotBlank() }
+            ?: choice?.optString("text").orEmpty().trim()
+    }
+
     /** One chat completion call. */
     suspend fun chat(history: List<ChatMessage>): LlmResponse = withContext(Dispatchers.IO) {
         if (endpoint("/chat/completions").isEmpty()) throw LlmException("No base URL configured.")
@@ -146,64 +168,62 @@ class LlmClient(private val cfg: ProviderConfig) {
         val choice = choices.getJSONObject(0)
         val msg = choice.optJSONObject("message") ?: JSONObject()
 
-        val textOut = when (val c = msg.opt("content")) {
-            null, JSONObject.NULL -> msg.optString("reasoning_content", "")
-            is String -> c
-            is JSONArray -> {
-                val sb = StringBuilder()
-                for (i in 0 until c.length()) {
-                    val part = c.optJSONObject(i) ?: continue
-                    sb.append(part.optString("text"))
-                }
-                sb.toString()
-            }
-            else -> c.toString()
-        }
-
-        LlmResponse(text = textOut)
+        LlmResponse(text = messageText(msg, choice))
     }
 
     /** OpenAI-compatible function/tool call used only by explicit Automation mode. */
     suspend fun chatWithTools(messages: JSONArray, tools: JSONArray): LlmToolResponse = withContext(Dispatchers.IO) {
         if (endpoint("/chat/completions").isEmpty()) throw LlmException("No base URL configured.")
-        val body = JSONObject()
-            .put("model", cfg.model)
-            .put("messages", messages)
-            .put("tools", tools)
-            .put("tool_choice", "auto")
-            .put("temperature", 0.1)
-            .put("max_tokens", 900)
-        val request = Request.Builder()
-            .url(endpoint("/chat/completions"))
-            .post(body.toString().toRequestBody(JSON))
-            .also { buildHeaders(it) }
-            .build()
-        val (code, text) = try { execute(request) } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { throw LlmException("Network error: ${e.message ?: e.javaClass.simpleName}") }
-        if (code !in 200..299) throw LlmException("HTTP $code from ${cfg.name}: ${text.take(500)}")
-        val root = try { JSONObject(text) } catch (_: Exception) { throw LlmException("Bad tool response: ${text.take(220)}") }
-        val msg = root.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")
-            ?: throw LlmException("Tool response has no message")
-        val content = when (val c = msg.opt("content")) {
-            null, JSONObject.NULL -> ""
-            is String -> c
-            is JSONArray -> buildString {
-                for (i in 0 until c.length()) append(c.optJSONObject(i)?.optString("text").orEmpty())
+
+        suspend fun requestOnce(requestMessages: JSONArray, maxTokens: Int): LlmToolResponse {
+            val body = JSONObject()
+                .put("model", cfg.model)
+                .put("messages", requestMessages)
+                .put("tools", tools)
+                .put("tool_choice", "auto")
+                .put("temperature", 0.1)
+                .put("max_tokens", maxTokens)
+            val request = Request.Builder()
+                .url(endpoint("/chat/completions"))
+                .post(body.toString().toRequestBody(JSON))
+                .also { buildHeaders(it) }
+                .build()
+            val (code, rawText) = try { execute(request) } catch (e: CancellationException) { throw e }
+                catch (e: Exception) { throw LlmException("Network error: ${e.message ?: e.javaClass.simpleName}") }
+            if (code !in 200..299) throw LlmException("HTTP $code from ${cfg.name}: ${rawText.take(500)}")
+            val root = try { JSONObject(rawText) }
+                catch (_: Exception) { throw LlmException("Bad tool response: ${rawText.take(220)}") }
+            val choice = root.optJSONArray("choices")?.optJSONObject(0)
+                ?: throw LlmException("Tool response has no choice")
+            val msg = choice.optJSONObject("message")
+                ?: throw LlmException("Tool response has no message")
+            val calls = mutableListOf<LlmToolCall>()
+            val arr = msg.optJSONArray("tool_calls")
+            if (arr != null) for (i in 0 until arr.length()) {
+                val call = arr.optJSONObject(i) ?: continue
+                val fn = call.optJSONObject("function") ?: continue
+                val raw = fn.optString("arguments", "{}")
+                val args = try { JSONObject(raw) }
+                    catch (_: Exception) { throw LlmException("Model returned invalid arguments for ${fn.optString("name")}") }
+                val name = fn.optString("name")
+                if (name !in com.agentbubble.operator.AutomationToolCatalog.names)
+                    throw LlmException("Unsupported automation tool: $name")
+                calls += LlmToolCall(call.optString("id", "call_$i"), name, args, raw)
             }
-            else -> c.toString()
+            return LlmToolResponse(messageText(msg, choice), calls)
         }
-        val calls = mutableListOf<LlmToolCall>()
-        val arr = msg.optJSONArray("tool_calls")
-        if (arr != null) for (i in 0 until arr.length()) {
-            val call = arr.optJSONObject(i) ?: continue
-            val fn = call.optJSONObject("function") ?: continue
-            val raw = fn.optString("arguments", "{}")
-            val args = try { JSONObject(raw) } catch (_: Exception) { throw LlmException("Model returned invalid arguments for ${fn.optString("name")}") }
-            val name = fn.optString("name")
-            if (name !in com.agentbubble.operator.AutomationToolCatalog.names) throw LlmException("Unsupported automation tool: $name")
-            calls += LlmToolCall(call.optString("id", "call_$i"), name, args, raw)
-        }
-        LlmToolResponse(content, calls)
+
+        val first = requestOnce(messages, 1800)
+        if (first.text.isNotBlank() || first.toolCalls.isNotEmpty()) return@withContext first
+
+        // A reasoning model can consume its whole first budget without emitting final content.
+        val retryMessages = JSONArray(messages.toString()).put(JSONObject()
+            .put("role", "user")
+            .put("content", "Your previous response was empty. Return one valid tool call or a concise final answer now."))
+        val second = requestOnce(retryMessages, 2400)
+        if (second.text.isBlank() && second.toolCalls.isEmpty())
+            throw LlmException("The selected model returned an empty answer twice. Try another vision/tool-capable model.")
+        second
     }
 
     /** Independent checks: a model list or working chat does not prove vision or tool support. */

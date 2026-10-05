@@ -11,10 +11,13 @@ import org.json.JSONObject
 object AutomationToolCatalog {
     val names = setOf(
         "inspect_screen", "open_app", "click_text", "click_node", "type_text", "scroll",
-        "tap", "swipe", "back", "home", "wait_ms", "finish"
+        "tap", "swipe", "back", "home", "wait_ms", "remember_items",
+        "update_item_status", "finish"
     )
 
-    fun isMutation(name: String): Boolean = name !in setOf("inspect_screen", "wait_ms", "finish")
+    fun isMutation(name: String): Boolean = name !in setOf(
+        "inspect_screen", "wait_ms", "remember_items", "update_item_status", "finish"
+    )
 
     fun apiSchema(): JSONArray = JSONArray().apply {
         put(tool("inspect_screen", "Inspect the current Android accessibility UI tree before acting and after navigation.",
@@ -44,6 +47,19 @@ object AutomationToolCatalog {
         put(tool("back", "Press Android Back.", JSONObject(), emptyList()))
         put(tool("home", "Press Android Home. This may leave the task app.", JSONObject(), emptyList()))
         put(tool("wait_ms", "Wait briefly for a screen transition.", obj("milliseconds", "integer", "50 to 3000"), listOf("milliseconds")))
+        val item = JSONObject().put("type", "object").put("properties", properties(
+            "name" to spec("string", "Exact visible file/item name; include enough text to identify it"),
+            "details" to spec("string", "Visible date, type, size or matching reason")
+        )).put("required", JSONArray(listOf("name"))).put("additionalProperties", false)
+        put(tool("remember_items", "Store all matching items visible on this page before scrolling. Memory deduplicates normalized names.",
+            properties("items" to JSONObject().put("type", "array").put("items", item).put("maxItems", 30)),
+            listOf("items")))
+        put(tool("update_item_status", "Update a remembered item after an attempted action or fresh visible verification. Never mark downloaded from a click result alone.", properties(
+            "name" to spec("string", "Remembered item name"),
+            "status" to spec("string", "found, attempted, downloaded, failed or skipped")
+                .put("enum", JSONArray(TaskLedger.STATUSES.toList())),
+            "evidence" to spec("string", "Exact visible UI text proving downloaded status; otherwise empty")
+        ), listOf("name", "status", "evidence")))
         put(tool("finish", "Finish after observing the result. Give exact visible evidence text, or leave evidence empty if unverified.", properties(
             "summary" to spec("string", "What happened and what remains"),
             "evidence" to spec("string", "Exact text from the latest UI tree proving completion, or empty")

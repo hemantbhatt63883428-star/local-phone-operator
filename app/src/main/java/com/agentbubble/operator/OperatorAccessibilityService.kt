@@ -51,7 +51,6 @@ class OperatorAccessibilityService : AccessibilityService() {
         @Volatile var connected: OperatorAccessibilityService? = null; private set
     }
     private var lastScreenshotRequestAtMs = 0L
-
     override fun onServiceConnected() { connected = this }
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
     override fun onInterrupt() { if (connected === this) connected = null }
@@ -65,10 +64,7 @@ class OperatorAccessibilityService : AccessibilityService() {
             .thenByDescending { it.isActive }.thenByDescending { it.layer })
         .firstOrNull()
 
-    /**
-     * Cheap stale-action check: re-read the target window and accessibility tree without asking
-     * Android for another screenshot or encoding another JPEG.
-     */
+    /** Re-read target identity and structure without another screenshot/JPEG encode. */
     fun currentScreenKey(): Int {
         check(Build.VERSION.SDK_INT >= 34) { "Chat + Tasks screen images require Android 14 or newer." }
         val target = targetWindow() ?: error("No external app window is visible.")
@@ -77,10 +73,7 @@ class OperatorAccessibilityService : AccessibilityService() {
         check(!bounds.isEmpty) { "Target window has no visible bounds." }
         val rotation = (getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
         return ScreenObservation.structureKey(
-            root.packageName?.toString().orEmpty(),
-            rotation,
-            bounds,
-            NodeTree.render(root, 300)
+            root.packageName?.toString().orEmpty(), rotation, bounds, NodeTree.render(root, 300)
         )
     }
 

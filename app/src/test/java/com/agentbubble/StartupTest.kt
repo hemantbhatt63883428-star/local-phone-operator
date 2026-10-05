@@ -66,6 +66,46 @@ class StartupTest {
         assertEquals("https://openrouter.ai/api/v1", again.baseUrl)
     }
 
+    @Test
+    fun toolChatReadsReasoningProviderFallbackText() = runBlocking {
+        val server = MockWebServer()
+        server.start()
+        try {
+            server.enqueue(MockResponse().setHeader("Content-Type", "application/json").setBody(
+                """{"choices":[{"message":{"role":"assistant","content":null,"reasoning_content":"Question 53 answer"},"finish_reason":"stop"}]}"""
+            ))
+            val response = com.agentbubble.net.LlmClient(cfg(server)).chatWithTools(
+                org.json.JSONArray().put(org.json.JSONObject().put("role", "user").put("content", "Solve q53")),
+                org.json.JSONArray()
+            )
+            assertEquals("Question 53 answer", response.text)
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun emptyToolResponseIsRetriedOnceWithLargerBudget() = runBlocking {
+        val server = MockWebServer()
+        server.start()
+        try {
+            server.enqueue(MockResponse().setHeader("Content-Type", "application/json").setBody(
+                """{"choices":[{"message":{"role":"assistant","content":""},"finish_reason":"length"}]}"""
+            ))
+            server.enqueue(MockResponse().setHeader("Content-Type", "application/json").setBody(
+                """{"choices":[{"message":{"role":"assistant","content":"Recovered answer"},"finish_reason":"stop"}]}"""
+            ))
+            val response = com.agentbubble.net.LlmClient(cfg(server)).chatWithTools(
+                org.json.JSONArray().put(org.json.JSONObject().put("role", "user").put("content", "Solve q53")),
+                org.json.JSONArray()
+            )
+            assertEquals("Recovered answer", response.text)
+            assertEquals(2, server.requestCount)
+        } finally {
+            server.shutdown()
+        }
+    }
+
     /** The model list comes from the provider itself — never a hard-coded list. */
     @Test
     fun modelListComesFromTheProvider() = runBlocking {
@@ -511,13 +551,13 @@ class StartupTest {
         assertEquals(2, list.childCount)
 
         val row = list.getChildAt(1) as android.view.ViewGroup
-        row.getChildAt(2).performClick()   // the ✕ of that row (after the download button)
+        row.getChildAt(1).performClick()   // the ✕ of that row
 
         assertEquals("gone from the phone", 1, com.agentbubble.data.SessionStore.forModel(ctx, "p1", "model-one").size)
         assertEquals("gone from the list", 1, list.childCount)
 
         // deleting the chat that is open must not leave an empty card behind
-        (list.getChildAt(0) as android.view.ViewGroup).getChildAt(2).performClick()
+        (list.getChildAt(0) as android.view.ViewGroup).getChildAt(1).performClick()
         assertEquals("both are gone", 0, com.agentbubble.data.SessionStore.forModel(ctx, "p1", "model-one").size)
         assertEquals("the list says so", 1, list.childCount)
         assertEquals("back to the conversation", View.GONE, root.findViewById<View>(R.id.historyBox).visibility)
