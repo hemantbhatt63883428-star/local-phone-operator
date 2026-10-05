@@ -203,6 +203,9 @@ class OperatorAccessibilityService : AccessibilityService() {
                 try {
                     if (useDisplay) takeScreenshot(displayId, mainExecutor, callback)
                     else takeScreenshotOfWindow(windowId, mainExecutor, callback)
+                } catch (_: SecurityException) {
+                    // Never treat an explicit platform security denial as a recoverable window error.
+                    if (cont.isActive) cont.resume(ScreenshotAttempt(errorCode = 6))
                 } catch (_: RuntimeException) {
                     if (cont.isActive) cont.resume(ScreenshotAttempt(errorCode = 1))
                 }
