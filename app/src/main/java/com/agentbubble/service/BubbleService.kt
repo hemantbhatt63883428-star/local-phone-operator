@@ -491,6 +491,16 @@ class BubbleService : Service() {
 
     // ------------------------------------------------------------------ chat sidebar
 
+    fun toggleChat() {
+        // A tap outside already closed the chat — the same tap on the bubble must not reopen it.
+        if (!chatOpen && android.os.SystemClock.uptimeMillis() - outsideCloseAt < 450) return
+        if (chatOpen) {
+            closeChat()
+        } else {
+            openChat()
+        }
+    }
+
     private fun setActionWindowsHidden(hidden: Boolean) {
         bubbleView?.let { view ->
             view.visibility = if (hidden) View.INVISIBLE else View.VISIBLE
@@ -505,16 +515,6 @@ class BubbleService : Service() {
             }
         }
         actionPanel?.setHiddenForAction(hidden)
-    }
-
-    fun toggleChat() {
-        // A tap outside already closed the chat — the same tap on the bubble must not reopen it.
-        if (!chatOpen && android.os.SystemClock.uptimeMillis() - outsideCloseAt < 450) return
-        if (chatOpen) {
-            closeChat()
-        } else {
-            openChat()
-        }
     }
 
     private fun startAction(task: String, session: com.agentbubble.data.Session) {
@@ -549,6 +549,7 @@ class BubbleService : Service() {
             } catch (e: Exception) {
                 result = "Task stopped: " + (e.message ?: e.javaClass.simpleName).take(400)
             } finally {
+                setActionWindowsHidden(false)
                 com.agentbubble.data.SessionStore.append(this@BubbleService, session, "assistant", result)
                 control.remove()
                 actionPanel = null
